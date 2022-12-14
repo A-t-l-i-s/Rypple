@@ -1,0 +1,58 @@
+
+Base:
+    File: value str/path
+    Path: value str/path
+
+    Run: value list[str]
+    Done: statement
+    Exit: statement
+  
+    Extra: value list[str]
+    Print: command str
+    Delay: command int/float
+    Clear: statement
+    Reset: statement
+    Popout: command bool
+    Extension: value str
+    Include: command str/path
+  
+    If: command/statement str
+    Elif: command/statement str
+    Else: statement
+    End: statement
+    
+    Label: command str
+    Goto: command str
+    
+    Variable: command str[any]
+
+
+
+Literals:
+    Comment: #
+    Format: @[Var]
+    Undefined: null/undefined/none
+    True: true/on/1/yes
+    False: false/off/0/no
+    
+
+
+
+Python:
+    LibPath: value str/path
+    STDOutEncoding: value str
+    WriteBytecode: value bool
+
+
+
+C/C++:
+    BitMode: value int/str
+    IncludePath: value str/path
+    IncludeLib: value str/path
+    StdVersion: value str
+    Shared: value bool
+    Optimized: value int
+    WindowMode: value true
+    OutputPath: value str/path
+  
+  

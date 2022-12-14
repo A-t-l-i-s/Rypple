@@ -1,0 +1,48 @@
+Extension: Python
+
+
+
+inFile: main.py
+Label: begin
+
+
+
+If: isFile(@[inFile])
+	File: @[inFile]
+	Path: .
+	
+	Print: Compiling @[inFile]...
+
+	If: true
+		If: false
+			Print: never
+		Else:
+			Print: always
+		End
+	End
+
+	If: true
+		Print: OwO
+	End
+
+	
+	Done
+End
+
+
+
+Struct test:
+	nice: 420
+	hehe: 69
+End
+
+
+
+Exit
+
+
+
+
+
+
+

@@ -1,0 +1,34 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/syntax.html
+
+name: RyPile
+scope: source.rypl
+
+file_extensions: [rypl]
+
+
+
+contexts:
+  main:
+    - match: \b(Else|End|Return)\b
+      scope: keyword.control.rypl
+
+
+    - match: \b\b
+      scope: keyword.control.rypl
+
+
+
+    - include: numeric
+
+
+
+
+
+  numeric:
+    - match: \b[0-9.]+\b
+      scope: constant.numeric.rypl
+
+
+

@@ -1,0 +1,15 @@
+Extension: Console
+
+
+
+Namespace: struct1
+	Namespace: struct2
+		var1: UwU
+	End
+End
+
+
+var2: Hewo
+
+
+

@@ -1,0 +1,21 @@
+Extension: Python
+
+inFile: main.py
+Label: begin
+
+If isFile(@[inFile])
+	File: @[inFile]
+	Path: .
+	
+	Print: Compiling @[inFile]...
+	
+	Done
+	
+	If failed
+		Delay: 3s
+		Goto: begin
+	End
+End
+
+Exit
+

@@ -1,0 +1,35 @@
+
+
+Path: .
+Popout
+Extension: Python
+Executable: cmd.exe /k echo
+Run: cmd.exe /k echo UwU & pause
+Delay: 1ns
+Include: None
+
+var: UwU
+Delete: var
+
+Pass
+
+Clear
+Print: @[var]
+
+If: defined("var")
+	Function: a
+		Print: hello to the original a
+		Return
+	End
+Else
+	Function: a
+		Print: hello to the fake a
+		Return
+	End
+End
+
+
+Call: a
+
+
+
