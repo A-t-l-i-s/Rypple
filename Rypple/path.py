@@ -60,3 +60,26 @@ class Rypple_Path(object):
 
 
 
+	# ~~~~~~~~ JSON Conversion ~~~~~~~
+	def toJSON(self):
+		return {
+			"base":			self.base,
+			"path":			self.path,
+		}
+
+
+
+	@classmethod
+	def fromJSON(cls,data):
+		self=object.__new__(cls)
+
+
+		self.base=			data.get("base",-1)
+		self.path=			data.get("path",[])
+
+
+		return self
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+

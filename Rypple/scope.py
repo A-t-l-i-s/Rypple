@@ -8,6 +8,9 @@ from .exceptions import *
 from .exts.Core import Extension as Core_Extension
 from .exts.Console import Extension as Console_Extension
 
+from .exts.RyPile import Extension as RyPile_Extension
+from .exts.Python import Extension as Python_Extension
+
 
 
 
@@ -24,17 +27,19 @@ class Rypple_Scope(object):
 	variables = Rypple_Namespace({
 	})
 
-	constVariables = Rypple_Namespace({
+	constants = Rypple_Namespace({
+		"step": Rypple_Namespace({
+			"current": None,
+			"previous": None,
+		}),
+
 		"char": Rypple_Namespace({
 			"endl": "\n",
 			"tab": "\t",
 			"back": "\b",
 		}),
 
-		"step": Rypple_Namespace({
-			"current": None,
-			"previous": None,
-		}),
+		"exit": False,
 	})
 
 
@@ -55,11 +60,10 @@ class Rypple_Scope(object):
 	# All available extensions
 	extensions = {
 		Console_Extension.name: Console_Extension,
+		
+		RyPile_Extension.name: RyPile_Extension,
+		Python_Extension.name: Python_Extension,
 	}
-
-
-
-	exit = False
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -76,7 +80,7 @@ class Rypple_Scope(object):
 
 
 		while (index < size):
-			if (self.exit):
+			if (self.constants.exit):
 				break
 
 
@@ -85,8 +89,8 @@ class Rypple_Scope(object):
 
 
 			# Set Vars
-			self.constVariables.step.previous = self.constVariables.step.current
-			self.constVariables.step.current = step
+			self.constants.step.previous = self.constants.step.current
+			self.constants.step.current = step
 
 
 
@@ -113,7 +117,7 @@ class Rypple_Scope(object):
 
 			# Set a new variable
 			if (not found):
-				value = self.evaluate(step.value)
+				value = self.evaluate(step.value,namespace)
 
 
 				if (self.validVar(key)):
@@ -128,7 +132,6 @@ class Rypple_Scope(object):
 
 			# Increment step
 			index += 1
-
 
 
 
@@ -150,28 +153,55 @@ class Rypple_Scope(object):
 
 			return True
 		return False
+
+
+
+
+
+	def loadExtension(self,val):
+		if (val in self.extensions):
+			if (val not in self.loadedExtensions):
+				ext = self.extensions[val]
+
+				try:
+					ext.init(ext,self)
+								
+				except:
+					...
+
+				finally:
+					self.loadedExtensions[ext.name] = ext
+					return True
+
+		return False
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~ Evaluate Code ~~~~~~~~
-	def evaluate(self,data,file=None):
+	def evaluate(self,data,namespace=None,file=None):
 		# If no file specified
 		if (file == None):
 			file = "dummy"
 
 
+		if (namespace == None or namespace == self.variables):
+			namespace = Rypple_Namespace()
+
+
 		try:
 			# Compile data
 			comp = compile(data,file,"eval")
+
 	
 
 			# Evaluate data
 			out = eval(comp,{
 				"defined":self.defined,
 
+				**namespace.values(),
 				**self.variables.values(),
-				**self.constVariables.values(),
+				**self.constants.values(),
 
 				**self.modules.values(),
 			},{})
@@ -186,7 +216,7 @@ class Rypple_Scope(object):
 
 	# ~~~~~~~~ Core Functions ~~~~~~~~
 	def defined(self,var):
-		if (var in self.namespace or var in self.constVariables):
+		if (var in self.namespace or var in self.constants):
 			return True
 
 		else:
@@ -195,7 +225,3 @@ class Rypple_Scope(object):
 
 
 
-
-
-
-...

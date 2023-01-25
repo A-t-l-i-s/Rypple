@@ -1,15 +1,13 @@
 Extension: Console
+Extension: RyPile
+Extension: Python
 
 
 
-Namespace: struct1
-	Namespace: struct2
-		var1: UwU
-	End
-End
 
 
-var2: Hewo
+
+Include: extra
 
 
 

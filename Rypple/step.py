@@ -18,15 +18,14 @@ __all__=["Rypple_Step"]
 @dataclass(kw_only=True)
 class Rypple_Step(object):
 	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
-	type:int=-1
-	key:str=None
-	value:str=None
-	level:int=-1
-	id:int=-1
-	file:str=None
-	parent:str=-1
+	key:str = None
+	value:str = None
+	level:int = -1
+	id:int = -1
+	parent:str = -1
+	temp:bool = False
 
-	steps:list=field(default_factory=list)
+	steps:list = field(default_factory=list)
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -34,13 +33,12 @@ class Rypple_Step(object):
 	# ~~~~~~~~ JSON Conversion ~~~~~~~
 	def toJSON(self):
 		return {
-			"type":			self.type,
 			"key":			self.key,
 			"value":		self.value,
 			"level":		self.level,
 			"id":			self.id,
-			"file":			self.file,
 			"parent":		self.parent,
+			"temp":			self.temp,
 
 			"steps":		[s.toJSON() for s in self.steps],
 		}
@@ -54,13 +52,12 @@ class Rypple_Step(object):
 		self=object.__new__(cls)
 
 
-		self.type=			data.get("type",-1)
 		self.key=			data.get("key",None)
 		self.value=			data.get("value",None)
 		self.level=			data.get("level",-1)
 		self.id=			data.get("id",-1)
-		self.file=			data.get("file",None)
 		self.parent=		data.get("parent",-1)
+		self.temp=			data.get("temp",False)
 
 		self.steps=			[cls.fromJSON(s) for s in data.get("steps",[])]
 
@@ -72,16 +69,16 @@ class Rypple_Step(object):
 
 	# ~~~~~~ Bytecode Conversion ~~~~~
 	def toBytecode(self):
-		arr=self.toJSON()
+		arr = self.toJSON()
 
-		buf=json.dumps(arr)
-		buf=buf.encode()
+		buf = json.dumps(arr)
+		buf = buf.encode()
 
 
 		try:
-			comp=zlib.compress(buf)
+			comp = zlib.compress(buf)
 		except:
-			comp=None
+			comp = None
 
 
 		return comp
@@ -93,13 +90,13 @@ class Rypple_Step(object):
 	@classmethod
 	def fromBytecode(cls,data):
 		try:
-			buf=zlib.decompress(data)
+			buf = zlib.decompress(data)
 
-			arr=json.loads(buf)
+			arr = json.loads(buf)
 
-			groups=cls.fromJSON(arr)
+			groups = cls.fromJSON(arr)
 		except:
-			groups=None
+			groups = None
 
 
 		return groups
@@ -140,7 +137,7 @@ class Rypple_Step(object):
 				
 
 
-		path=Rypple_Path(base=self.id)
+		path = Rypple_Path(base=self.id)
 		iterate(self)
 
 		return path
@@ -183,7 +180,7 @@ class Rypple_Step(object):
 	def get(self,path):
 		def iterate(step):
 			for s in step.steps:
-				f=path.first
+				f = path.first
 
 				if (f != None):
 					if (f == s.id):
@@ -205,6 +202,17 @@ class Rypple_Step(object):
 
 
 		return None
+
+
+
+
+
+	def isCmd(self):
+		if (self.value != None):
+			return True
+
+		else:
+			return False
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

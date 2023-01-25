@@ -4,6 +4,7 @@ import uuid
 import zlib
 import ntpath
 import pickle
+from pathlib import Path
 
 from .path import *
 from .scope import *
@@ -16,12 +17,13 @@ from .exts.Core import Extension as Core_Extension
 
 
 
-__all__=["Rypple","Rypple_Path","Rypple_Scope","Rypple_Step","Rypple_Namespace"]
+__all__=["Rypple","Rypple_Scope","loads","load"]
 
 
 
 
 
+# ~~~~~~~~~~~~ Rypple ~~~~~~~~~~~~
 class Rypple:
 	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
 	fileExtensions = (
@@ -30,11 +32,6 @@ class Rypple:
 		".ryc",
 		".rycl",
 	)
-
-
-
-	COMMAND = 0
-	STATEMENT = 1
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -43,7 +40,7 @@ class Rypple:
 		Searches for specified file name in paths
 	"""
 	def searchFile(self,name,paths_=()):
-		paths=[]
+		paths = []
 		for p in paths_:
 			if (isinstance(p,str)):
 				if (ntpath.exists(p)):
@@ -54,17 +51,17 @@ class Rypple:
 						paths.append(p)
 
 
-		paths+=os.environ.get("PATH","").split(";")
-		paths+=os.environ.get("RYPPLE_MODULES","").split(";")
+		paths += os.environ.get("PATH","").split(";")
+		paths += os.environ.get("RYPPLE_MODULES","").split(";")
 
-		paths+=(
+		paths += (
 			"./modules",
 		)
 
 		for p in paths:
 			for e in self.fileExtensions + ("",):
-				p_=ntpath.join(p,name + e)
-				p_=ntpath.realpath(p_)
+				p_ = ntpath.join(p,name + e)
+				p_ = ntpath.realpath(p_)
 
 				if (ntpath.exists(p_) and ntpath.isfile(p_)):
 					return p_
@@ -77,22 +74,22 @@ class Rypple:
 		Read file and parse into steps
 	"""
 	def parseFile(self,path):
-		steps=[]
+		steps = []
 		
 		if (isinstance(path,str)):
 			if (ntpath.exists(path) and ntpath.isfile(path)):
 				with open(path,"rb") as file:
-					buffer=file.read()
+					buffer = file.read()
 
 
 				try:
-					data=buffer.decode()
+					data = buffer.decode()
 
 				except:
-					data=buffer
+					data = buffer
 
 
-				steps=self.parseData(data)
+				steps = self.parseData(data)
 
 
 		return steps
@@ -106,10 +103,10 @@ class Rypple:
 	"""
 	def parseData(self,data):
 		if (isinstance(data,str)):
-			lines=data.split("\n")
+			lines = data.split("\n")
 
-			steps=self.parseLines(lines)
-			groups=self.parseSteps(steps)
+			steps = self.parseLines(lines)
+			groups = self.parseSteps(steps)
 
 			return groups
 
@@ -117,7 +114,7 @@ class Rypple:
 
 
 		elif (isinstance(data,(bytes,bytearray))):
-			groups=Rypple_Step.fromBytecode(data)
+			groups = Rypple_Step.fromBytecode(data)
 
 			return groups
 
@@ -133,76 +130,66 @@ class Rypple:
 	"""
 		Takes in unfiltered lines as list and parses them into a filtered list of steps
 	"""
-	def parseLines(self,lines,*,file=None):
+	def parseLines(self,lines):
 		steps=[]
-
-
-		if (isinstance(file,str)):
-			file=file.replace("/","\\")
 
 
 		# Iterate through all lines
 		for line in lines:
 			# Declare vars
-			key=None
-			value=None
-			level=-1
+			key = None
+			value = None
+			level = -1
 
 
 			# Search for statement in line
-			v=re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\_\.]*\s*$",line)
+			v = re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\.\_]*\s*$",line)
 
 
 
 			# If found a statement in line
 			if (v):
-				f,t=v.span()
+				f,t = v.span()
 				
-				key=line[:t]
-				value=None
-				level=key.count("\t") + key.count(" ")
-
-				typ=self.STATEMENT
+				key = line[:t]
+				value = None
+				level = key.count("\t") + key.count(" ")
 
 				# Clean key
-				key=key.strip()
+				key = key.strip()
 
 
 			else:
 				# Search for command in line
-				v=re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\_\.]*\s*:",line)
+				v = re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\.\_]*\s*:",line)
 
 
 				# If found a command in line
 				if (v):
-					f,t=v.span()
+					f,t = v.span()
 
-					key=line[f:t]
-					value=line[t:]
-					level=key.count("\t") + key.count(" ")
-
-					typ=self.COMMAND
+					key = line[f:t]
+					value = line[t:]
+					level = key.count("\t") + key.count(" ")
 
 					# Clean key
-					key=key.strip()
-					key=key.rstrip(":")
-					key=key.strip()
+					key = key.strip()
+					key = key.rstrip(":")
+					key = key.strip()
 
 					# Clean value
-					value=value.strip()
+					value = value.strip()
 
 
 
 
 			if (key):
 				# Create step model
-				step=Rypple_Step(
-					type=typ,
-					key=key,
-					value=value,
-					level=level,
-					id=uuid.uuid1().int,
-					file=file,
+				step = Rypple_Step(
+					key = key,
+					value = value,
+					level = level,
+					id = uuid.uuid1().int,
 				)
 
 				steps.append(step)
@@ -218,24 +205,23 @@ class Rypple:
 		Takes in steps and groups them into according scopes
 	"""
 	def parseSteps(self,steps):
-		blocks=Rypple_Step(type="base",key="Base")
-		block=blocks
-		previousBlocks=[block]
+		blocks = Rypple_Step(key="Base")
+		block = blocks
+		previousBlocks = [block]
 
-		index=0
+		index = 0
 
 
 
 
 
 		while (index < len(steps)):
-			step=steps[index]
+			step = steps[index]
 			
-			type_=step.type
-			key=step.key
-			value=step.value
+			key = step.key
+			value = step.value
 
-			step.parent=block.id
+			step.parent = block.id
 
 
 
@@ -252,15 +238,15 @@ class Rypple:
 				block.steps.append(step)
 				previousBlocks.append(block)
 
-				block=step
+				block = step
 
 
 
 			# Stepback from current group
 			elif (key == Core_Extension.End.name):
-				if (type_ == self.STATEMENT):
+				if (value == None):
 					if (len(previousBlocks) > 0):
-						block=previousBlocks.pop(-1)
+						block = previousBlocks.pop(-1)
 
 				else:
 					... # Error
@@ -268,17 +254,17 @@ class Rypple:
 
 
 			# Include code from other files
-			elif (key == Core_Extension.End.name):
-				if (type_ == self.COMMAND):
+			elif (key == Core_Extension.Include.name):
+				if (value != None):
 					steps.pop(index)
 
 
 					if (isinstance(value,str)):
-						p=self.searchFile(value)
+						p = self.searchFile(value)
 
 
 						if (p != None):
-							groups=self.parseFile(p)
+							groups = self.parseFile(p)
 
 
 							for s in groups.steps[::-1]:
@@ -290,7 +276,7 @@ class Rypple:
 						... # Error
 
 
-					index-=1
+					index -= 1
 
 				else:
 					... # Error
@@ -299,7 +285,7 @@ class Rypple:
 
 			# Ignore these commands
 			elif (key == Core_Extension.Pass.name):
-				if (type_ == self.STATEMENT):
+				if (value == None):
 					...
 
 				else:
@@ -314,12 +300,71 @@ class Rypple:
 
 
 
-			index+=1
+			index += 1
 
 
 
 
 		return blocks
+
+
+
+
+
+
+
+
+
+
+
+
+
+def loads(data,scope = None):
+	r = Rypple()
+
+
+	# Parse groups
+	groups = r.parseData(data)
+
+
+	# Create new scope
+	if (not isinstance(scope,Rypple_Scope)):
+		scope = Rypple_Scope()
+	
+
+	scope.run(groups)
+
+	var = scope.variables
+	var.removeTemps()
+
+	return var
+
+
+
+
+
+def load(path,scope = None):
+	path = Path(path)
+
+	# Is file
+	if (path.is_file()):
+		# Open file
+		f = path.open("r")
+
+		# Read file
+		d = f.read()
+
+		# Close file
+		f.close()
+
+		# Load data
+		return loads(d)
+
+
+
+
+
+
 
 
 

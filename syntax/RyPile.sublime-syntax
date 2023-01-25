@@ -11,11 +11,7 @@ file_extensions: [rypl]
 
 contexts:
   main:
-    - match: \b(Else|End|Return)\b
-      scope: keyword.control.rypl
-
-
-    - match: \b\b
+    - match: \b(Else|End)\b
       scope: keyword.control.rypl
 
 
@@ -27,7 +23,7 @@ contexts:
 
 
   numeric:
-    - match: \b[0-9.]+\b
+    - match: \b[0-9.]{1,}\b
       scope: constant.numeric.rypl
 
 

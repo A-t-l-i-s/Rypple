@@ -1,3 +1,9 @@
+from .namespace import *
+
+
+
+
+
 __all__=["Rypple_Extension","Rypple_ExtensionKey"]
 
 
@@ -9,7 +15,7 @@ class Rypple_ExtensionKey(object):
 	enabled:bool = False
 
 
-	def callback(cls,step,scope):
+	def callback(cls,step,scope,namespace):
 		...
 
 
@@ -22,6 +28,12 @@ class Rypple_ExtensionKey(object):
 class Rypple_Extension(object):
 	name:str = None
 	enabled:bool = False
+
+
+
+	def init(cls,scope):
+		...
+
 
 
 	@classmethod
