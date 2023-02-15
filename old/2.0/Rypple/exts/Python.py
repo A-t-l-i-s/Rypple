@@ -22,26 +22,13 @@ class Extension(Rypple_Extension):
 		scope.loadExtension("RyPile")
 
 
+		# Set loaded extension
+		scope.variables.rypile.ext = cls
 
 
-
-	"""
-		Description: ...
-		Parameters: ...
-	"""
-	class Python(Rypple_ExtensionKey):
-		name = "Python"
-		enabled = True
-
-
-		def callback(cls,step,scope,namespace):
-			if (not step.isCmd()):
-				scope.variables.rypile.args.clear()
-
-				scope.variables.rypile.exe = "python"
-
-			else:
-				return Unknown()
+		# Set args
+		scope.variables.rypile.args.clear()
+		scope.variables.rypile.exe = "python"
 
 
 
@@ -51,8 +38,8 @@ class Extension(Rypple_Extension):
 		Description: ...
 		Parameters: ...
 	"""
-	class PyFile(Rypple_ExtensionKey):
-		name = "PyFile"
+	class File(Rypple_ExtensionKey):
+		name = "File"
 		enabled = True
 
 

@@ -1,47 +1,93 @@
-import json
+import sys
+import uuid
 import zlib
-import ntpath
+import orjson
+
 from dataclasses import dataclass, field
 
-from .path import *
+
+
+
+
+__all__ = ("Rypple_Step",)
 
 
 
 
 
-__all__=["Rypple_Step"]
-
-
-
-
-
-@dataclass(kw_only=True)
-class Rypple_Step(object):
+@dataclass(kw_only = True)
+class Rypple_Step:
 	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
 	key:str = None
 	value:str = None
-	level:int = -1
 	id:int = -1
-	parent:str = -1
-	temp:bool = False
+	level:int = -1
 
-	steps:list = field(default_factory=list)
+	temp:bool = False
+	thread:bool = False
+
+	children:list = field(default_factory=list)
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+	# ~~~~~~~~~ Class Methods ~~~~~~~~
+	@classmethod
+	def newId(cls):
+		uid = uuid.uuid1()
+		val = uid.int
+
+		return val
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+	# ~~~~~~~~~~~~ Methods ~~~~~~~~~~~
+	def hasValue(self):
+		return self.value != None
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+	# ~~~~~~~~~~~ Children ~~~~~~~~~~~
+	def addChild(self,child):
+		if (isinstance(child,Rypple_Step)):
+			self.children.append(child)
+
+
+
+
+
+	def hasChildren(self):
+		if (len(self.children) > 0):
+			return True
+
+		return False
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~ JSON Conversion ~~~~~~~
 	def toJSON(self):
-		return {
+		out = {
 			"key":			self.key,
 			"value":		self.value,
 			"level":		self.level,
-			"id":			self.id,
-			"parent":		self.parent,
-			"temp":			self.temp,
 
-			"steps":		[s.toJSON() for s in self.steps],
+			"temp":			self.temp,
+			"thread":		self.thread,
+
+			"children":		[]
 		}
+
+		# Convert children to json
+		for s in self.children:
+			out["children"].append(
+				s.toJSON()
+			)
+
+
+		return out
 
 
 
@@ -52,36 +98,40 @@ class Rypple_Step(object):
 		self=object.__new__(cls)
 
 
-		self.key=			data.get("key",None)
-		self.value=			data.get("value",None)
-		self.level=			data.get("level",-1)
-		self.id=			data.get("id",-1)
-		self.parent=		data.get("parent",-1)
-		self.temp=			data.get("temp",False)
+		self.key=			data.get("key",		cls.key)
+		self.value=			data.get("value",	cls.value)
+		self.id=			cls.newId()
+		self.level=			data.get("level",	cls.level)
 
-		self.steps=			[cls.fromJSON(s) for s in data.get("steps",[])]
+		self.temp=			data.get("temp",	cls.temp)
+		self.thread=		data.get("thread",	cls.thread)
+
+		self.children=		[]
+
+		# Load children from json
+		for s in data.get("children",[]):
+			self.children.append(
+				cls.fromJSON(s)
+			)
 
 
 		return self
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
 
 
-
-	# ~~~~~~ Bytecode Conversion ~~~~~
+	# ~~~~~~~~ Byte Conversion ~~~~~~~
 	def toBytecode(self):
-		arr = self.toJSON()
+		# Get as JSON
+		jsonData = self.toJSON()
 
-		buf = json.dumps(arr)
-		buf = buf.encode()
+		# Convert to bytes
+		data = orjson.dumps(jsonData)
 
+		# Deflate data
+		out = zlib.compress(data)
 
-		try:
-			comp = zlib.compress(buf)
-		except:
-			comp = None
-
-
-		return comp
+		return out
 
 
 
@@ -89,116 +139,19 @@ class Rypple_Step(object):
 
 	@classmethod
 	def fromBytecode(cls,data):
-		try:
-			buf = zlib.decompress(data)
+		if (isinstance(data,(bytes,bytearray))):
+			try:
+				# Attempt to inflate data
+				newData = zlib.decompress(data)
 
-			arr = json.loads(buf)
-
-			groups = cls.fromJSON(arr)
-		except:
-			groups = None
-
-
-		return groups
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-	# ~~~~~~~~~~~ Functions ~~~~~~~~~~
-	def compare(self,keys):
-		for k,v in keys.items():
-			if (self[k] != v):
-				return False
-
-		return True
-
-
-
-
-
-	def getPath(self,**keys):
-		def iterate(step):
-			for s in step.steps:
-				path.add(s.id)
-
-				if (s.compare(keys)):
-					return True
-
-				else:
-					if (iterate(s)):
-						return True
-
-					else:
-						path.pop(-1)
-
-
-			return False
-
+				# Load data as json
+				jsonData = orjson.loads(newData)
 				
+				# Create new step and return it
+				return cls.fromJSON(jsonData)
 
-
-		path = Rypple_Path(base=self.id)
-		iterate(self)
-
-		return path
-
-
-
-
-
-	def getIndex(self,**keys):
-		for i,s in enumerate(self.steps):
-			if (s.compare(keys)):
-				return i
-
-
-		return -1
-
-
-
-
-
-
-	def find(self,**keys):
-		def iterate(step):
-			for s in step.steps:
-				if (s.compare(keys)):
-					yield s
-
-				for s_ in iterate(s):
-					yield s_
-
-				
-
-		return iterate(self)
-
-
-
-
-
-
-	def get(self,path):
-		def iterate(step):
-			for s in step.steps:
-				f = path.first
-
-				if (f != None):
-					if (f == s.id):
-						if (s.id == path.last):
-							return s
-
-						else:
-							path.pop(0)
-							return iterate(s)
-
-				else:
-					return step
-
-
-
-		if (path.base == self.id):
-			return iterate(self)
-
+			except:
+				...
 
 
 		return None
@@ -207,32 +160,84 @@ class Rypple_Step(object):
 
 
 
-	def isCmd(self):
-		if (self.value != None):
-			return True
+	def toFile(self,path):
+		# To bytes
+		data = self.toBytecode()
 
-		else:
-			return False
+		# Open file
+		with open(path,"wb") as file:
+			# Write to file
+			file.write(data)
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
-	# ~~~~~~~~~ Magic Methods ~~~~~~~~
-	def __iter__(self):
-		return self.steps.__iter__()
+	# ~~~~~~~~~~~~~ Print ~~~~~~~~~~~~
+	def print(self):
+		jsonData = self.toJSON()
+
+		out = orjson.dumps(jsonData,option=orjson.OPT_INDENT_2)
+		out = out.decode("utf-8")
+
+		sys.stdout.write(out + "\n")
 
 
 
-	def __getitem__(self,key):
-		if (hasattr(self,key)):
-			return getattr(self,key)
+
+
+	def printList(self):
+		def call(parent,children):
+			# Iterate through children
+			for v in children:
+				# Get values
+				key = v.key
+				val = v.value
+
+				# Format path
+				path = f"{parent}.{key}".strip(".")
+				
+				# Get inent count
+				c = path.count(".")
+
+
+				# If value is nothing
+				if (val == None):
+					val = ""
+
+
+				# Default signs
+				signs = ""
+
+				# Temp sign
+				if (v.temp):
+					signs += "~"
+
+				# Run sign
+				if (v.thread):
+					signs += "*"
+
+
+				if (val):
+					valOut = f": {val}"
+				else:
+					valOut = ""
+
+
+				# Print step
+				sys.stdout.write(("\t" * c) + signs + path + valOut + "\n")
+
+
+				# Iterate through next step
+				call(path,v.children)
 
 
 
-	def __setitem__(self,key,value):
-		if (hasattr(self,key)):
-			setattr(self,key,value)
+		# Initialize iteration
+		call("",self.children)
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 
 

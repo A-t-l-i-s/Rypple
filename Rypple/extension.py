@@ -1,33 +1,34 @@
-from .namespace import *
+import inspect
+
+from .decorators import *
 
 
 
 
 
-__all__=["Rypple_Extension","Rypple_ExtensionKey"]
+__all__ = ("Rypple_Extension",)
 
 
 
 
 
-class Rypple_ExtensionKey(object):
-	name:str = None
-	enabled:bool = False
-
-
-	def callback(cls,step,scope,namespace):
-		...
-
-
+requiredParameters = (
+	"cls",
+	"step",
+	"scope",
+	"namespace"
+)
 
 
 
 
 
+class Rypple_Extension:
+	name: str = None
+	description: str = None
 
-class Rypple_Extension(object):
-	name:str = None
-	enabled:bool = False
+	enabled: bool = False
+	core: bool = False
 
 
 
@@ -36,22 +37,79 @@ class Rypple_Extension(object):
 
 
 
+
+	# ~~~~~~~~~~~~ Methods ~~~~~~~~~~~
 	@classmethod
-	def list(cls):
+	def all(cls):
+		funcs = {}
+
+
 		for d in dir(cls):
 			v = getattr(cls,d)
+			
+			if (not (d.startswith("__") and d.endswith("__"))):
+				if (cls.valid(v)):
+					enabled = True
 
-			if (isinstance(v,type) and issubclass(v,Rypple_ExtensionKey)):
-				yield v
+					# If enabled
+					if (hasattr(v,"enabled")):
+						if (not v.enabled):
+							enabled = False
+
+
+					if (enabled):
+						# Get name
+						if (hasattr(v,"name")):
+							name = v.name
+						
+						else:
+							name = d
+
+						# Add function
+						funcs[name] = v
+
+
+		return funcs
+
+
+
 
 
 
 	@classmethod
-	def get(cls,key):
-		for k in cls.list():
-			if (k.name == key):
-				return k
-		
+	def get(cls,name):
+		funcs = cls.all()
+
+		return funcs.get(name)
+
+
+
+
+
+	@classmethod
+	def valid(cls,func):
+		if (callable(func)):
+			try:
+				sig = inspect.signature(func)
+				args = tuple(sig.parameters)
+
+			except:
+				return False
+
+
+			if (args == requiredParameters):
+				if (func.enabled):
+					return True
+
+
+		return False
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
 
 
 

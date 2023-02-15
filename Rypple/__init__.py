@@ -1,95 +1,101 @@
 import re
-import os
-import uuid
-import zlib
-import ntpath
-import pickle
 from pathlib import Path
 
-from .path import *
-from .scope import *
 from .step import *
+from .scope import *
 from .namespace import *
-
-from .exts.Core import Extension as Core_Extension
-
-
-
-
-
-__all__=["Rypple","Rypple_Scope","loads","load"]
+from .extension import *
 
 
 
 
 
-# ~~~~~~~~~~~~ Rypple ~~~~~~~~~~~~
+__all__ = ("Rypple",)
+
+
+
+
+
 class Rypple:
-	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
+	# Code delimiter
+	delimiter: str = ":"
+	comment: str = "#"
+
+	tempSign: str = "~"
+	threadSign: str = "*"
+
+
+
+	# Regex patterns
+	keyPattern: re.Pattern = re.compile(r"[A-Za-z\_][A-Za-z0-9\_\.]*")
+
+	signsPattern: re.Pattern = re.compile(rf"[{tempSign}{threadSign}]*")
+
+	stepPattern: re.Pattern = re.compile(rf"^(?P<Level>\s*)(?P<Signs>{signsPattern.pattern})(?P<Key>{keyPattern.pattern})((\s*)({delimiter})(\s*)(?P<Value>.*))?(\s*)$")
+
+
+
+	# Max level of indentation
+	maxLevel = 999
+
+
+
+	# Rypple file extensions
 	fileExtensions = (
-		".ryp",
-		".rypl",
+		# Bytecode
 		".ryc",
 		".rycl",
+
+		# Text Code
+		".ryp",
+		".rypl",
 	)
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
-	"""
-		Searches for specified file name in paths
-	"""
-	def searchFile(self,name,paths_=()):
-		paths = []
-		for p in paths_:
-			if (isinstance(p,str)):
-				if (ntpath.exists(p)):
-					if (ntpath.isfile(p)):
-						paths.append(ntpath.dirname(p))
+	@classmethod
+	def readFile(cls,path):
+		path = Path(path)
 
-					else:
-						paths.append(p)
+		if (path.is_file()):
+			with path.open("rb") as file:
+				data = file.read()
 
-
-		paths += os.environ.get("PATH","").split(";")
-		paths += os.environ.get("RYPPLE_MODULES","").split(";")
-
-		paths += (
-			"./modules",
-		)
-
-		for p in paths:
-			for e in self.fileExtensions + ("",):
-				p_ = ntpath.join(p,name + e)
-				p_ = ntpath.realpath(p_)
-
-				if (ntpath.exists(p_) and ntpath.isfile(p_)):
-					return p_
-
-
-
-
-
-	"""
-		Read file and parse into steps
-	"""
-	def parseFile(self,path):
-		steps = []
-		
-		if (isinstance(path,str)):
-			if (ntpath.exists(path) and ntpath.isfile(path)):
-				with open(path,"rb") as file:
-					buffer = file.read()
+				outData = None
 
 
 				try:
-					data = buffer.decode()
+					outData = data[:10].decode("utf-8")
+					outData += data[10:].decode("utf-8")
 
 				except:
-					data = buffer
+					outData = data
 
 
-				steps = self.parseData(data)
+				steps = cls.parse(outData)
+				
+				return steps
+
+
+
+
+
+
+	@classmethod
+	def parse(cls,data):
+		# Convert string to steps
+		if (isinstance(data,str)):
+			lines = cls.toLines(data)
+			steps = cls.toSteps(lines)
+
+
+		# Convert bytecode to steps
+		elif (isinstance(data,(bytes,bytearray))):
+			steps = Rypple_Step.fromBytecode(data)
+
+
+		else:
+			steps = None
 
 
 		return steps
@@ -98,273 +104,192 @@ class Rypple:
 
 
 
-	"""
-		Parse data into steps
-	"""
-	def parseData(self,data):
-		if (isinstance(data,str)):
-			lines = data.split("\n")
+	@classmethod
+	def validVar(cls,var):
+		if (isinstance(var,str)):
+			match = cls.keyPattern.fullmatch(var)
 
-			steps = self.parseLines(lines)
-			groups = self.parseSteps(steps)
+			if (match):
+				return True
 
-			return groups
-
-
-
-
-		elif (isinstance(data,(bytes,bytearray))):
-			groups = Rypple_Step.fromBytecode(data)
-
-			return groups
-
-
-
-
-		return None
+			return False
 
 
 
 
 
-	"""
-		Takes in unfiltered lines as list and parses them into a filtered list of steps
-	"""
-	def parseLines(self,lines):
-		steps=[]
+	@classmethod
+	def toLines(cls,data):
+		lines = []
 
 
-		# Iterate through all lines
+		for line in data.split("\n"):
+			if (not line.startswith(cls.comment)):
+				if (line.strip()):
+					lines.append(line)
+
+
+		return lines
+
+
+
+
+
+	@classmethod
+	def toSteps(cls,lines):
+		base = Rypple_Step(
+			key = "Base",
+			value = None,
+			id = -1,
+			level = -1,
+
+			temp = False,
+			thread = False
+		)
+
+		hierarchy = [base]
+		previous = base
+
+
+
 		for line in lines:
-			# Declare vars
-			key = None
-			value = None
-			level = -1
-
-
-			# Search for statement in line
-			v = re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\.\_]*\s*$",line)
+			# Search for line
+			match = cls.stepPattern.match(line)
 
 
 
-			# If found a statement in line
-			if (v):
-				f,t = v.span()
-				
-				key = line[:t]
-				value = None
-				level = key.count("\t") + key.count(" ")
-
-				# Clean key
-				key = key.strip()
+			if (match):
+				# Get groups
+				levelGroup = match.group("Level")
+				signsGroup = match.group("Signs")
+				keyGroup = match.group("Key")
+				valueGroup = match.group("Value")
 
 
-			else:
-				# Search for command in line
-				v = re.search(r"^\s*[a-zA-Z\_]{1}[a-zA-Z0-9\.\_]*\s*:",line)
 
 
-				# If found a command in line
-				if (v):
-					f,t = v.span()
+				# Get key an value
+				key = keyGroup
+				value = valueGroup
 
-					key = line[f:t]
-					value = line[t:]
-					level = key.count("\t") + key.count(" ")
 
-					# Clean key
-					key = key.strip()
-					key = key.rstrip(":")
-					key = key.strip()
 
-					# Clean value
+				if (value != None):
 					value = value.strip()
 
 
-
-
-			if (key):
-				# Create step model
-				step = Rypple_Step(
-					key = key,
-					value = value,
-					level = level,
-					id = uuid.uuid1().int,
-				)
-
-				steps.append(step)
-
-
-		return steps
+				if (not value):
+					value = None
 
 
 
+				if (key):
+					# Get level
+					level = 0
+					level += levelGroup.count(" ")
+					level += levelGroup.count("\t")
 
 
-	"""
-		Takes in steps and groups them into according scopes
-	"""
-	def parseSteps(self,steps):
-		blocks = Rypple_Step(key="Base")
-		block = blocks
-		previousBlocks = [block]
 
-		index = 0
+					# Get default signs
+					temp = Rypple_Step.temp
+					thread = Rypple_Step.thread
+
+
+					# Temp sign
+					if (cls.tempSign in signsGroup):
+						temp = not Rypple_Step.temp
+
+
+					# Thread sign
+					if (cls.threadSign in signsGroup):
+						thread = not Rypple_Step.thread
 
 
 
 
 
-		while (index < len(steps)):
-			step = steps[index]
-			
-			key = step.key
-			value = step.value
-
-			step.parent = block.id
+					if (level <= cls.maxLevel):
+						# All steps that will be processed
+						steps = []
 
 
 
-			# Create new group
-			if (key in (
-					Core_Extension.If.name,
-					Core_Extension.Function.name,
-					Core_Extension.For.name,
-					Core_Extension.While.name,
-					Core_Extension.Namespace.name,
-					Core_Extension.Else.name
-				)):
-				
-				block.steps.append(step)
-				previousBlocks.append(block)
-
-				block = step
+						# Create new step
+						firstStep = Rypple_Step(
+							key = key,
+							value = value,
+							id = Rypple_Step.newId(),
+							level = level,
+							
+							temp = temp,
+							thread = thread,
+						)
 
 
 
-			# Stepback from current group
-			elif (key == Core_Extension.End.name):
-				if (value == None):
-					if (len(previousBlocks) > 0):
-						block = previousBlocks.pop(-1)
+						# If include step
+						if (key == "Include"):
+							if (value != None):
+								for ext in ("",*cls.fileExtensions):
+									path = Path(value + ext)
 
-				else:
-					... # Error
-
-
-
-			# Include code from other files
-			elif (key == Core_Extension.Include.name):
-				if (value != None):
-					steps.pop(index)
+									if (path.is_file()):
+										includeBase = cls.readFile(path)
 
 
-					if (isinstance(value,str)):
-						p = self.searchFile(value)
+
+										# Get import name
+										name = path.stem
+
+										# Format import name
+										includeBase.key = name
 
 
-						if (p != None):
-							groups = self.parseFile(p)
+										steps += includeBase.children
 
 
-							for s in groups.steps[::-1]:
-								block.steps.insert(index,s)
+										# Break loop
+										break
 
 						else:
-							... # Error
-					else:
-						... # Error
-
-
-					index -= 1
-
-				else:
-					... # Error
+							steps.append(firstStep)
 
 
 
-			# Ignore these commands
-			elif (key == Core_Extension.Pass.name):
-				if (value == None):
-					...
+						# Iterate through each step
+						for step in steps:
+							# Get length of hirarchy
+							hlen = len(hierarchy)
 
-				else:
-					... # Error
-
-
-
-
-			else:
-				block.steps.append(step)
+							# If the level is beyond the hierarchy extend it
+							if (level >= hlen):
+								dif = (level - hlen) + 1
+								hierarchy += [base] * dif
 
 
 
+							# If level is in scope of the previous step
+							if (level == previous.level + 1):
+								hierarchy[level - 1] = previous
 
-			index += 1
+
+
+							# Get parent to step
+							parent = hierarchy[level - 1]
+							if (parent != None):
+								parent.addChild(step)
 
 
 
-
-		return blocks
+							# Set previous step
+							previous = step
 
 
 
 
 
-
-
-
-
-
-
-
-
-def loads(data,scope = None):
-	r = Rypple()
-
-
-	# Parse groups
-	groups = r.parseData(data)
-
-
-	# Create new scope
-	if (not isinstance(scope,Rypple_Scope)):
-		scope = Rypple_Scope()
-	
-
-	scope.run(groups)
-
-	var = scope.variables
-	var.removeTemps()
-
-	return var
-
-
-
-
-
-def load(path,scope = None):
-	path = Path(path)
-
-	# Is file
-	if (path.is_file()):
-		# Open file
-		f = path.open("r")
-
-		# Read file
-		d = f.read()
-
-		# Close file
-		f.close()
-
-		# Load data
-		return loads(d)
-
-
-
-
-
-
+		return base
 
 
 

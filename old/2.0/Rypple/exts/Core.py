@@ -256,9 +256,10 @@ class Extension(Rypple_Extension):
 				# Check if value is temp
 				isTemp = False
 
-				if (isinstance(var,str)):
-					if (len(var) > 0):
-						if (var[0] == '~'):
+				if (isinstance(value,str)):
+					if (len(value) > 0):
+						if (value[0] == '~'):
+							value = value[1:]
 							isTemp = True
 
 
@@ -461,6 +462,36 @@ class Extension(Rypple_Extension):
 				if (isinstance(value,str)):
 					if (scope.loadExtension(value)):
 						...
+
+					else:
+						return Unknown()
+				else:
+					return Unknown()
+			else:
+				return Unknown()
+
+
+
+
+
+	"""
+		Description: ...
+		Parameters: ...
+	"""
+	class RemoveExtension(Rypple_ExtensionKey):
+		name = "RemoveExtension"
+		enabled = True
+
+
+		def callback(cls,step,scope,namespace):
+			if (step.isCmd()):
+				value = scope.evaluate(step.value,namespace)
+
+
+				if (isinstance(value,str)):
+					if (value in scope.loadedExtensions):
+						scope.loadedExtensions.pop(value)
+
 					else:
 						return Unknown()
 				else:

@@ -1,21 +1,54 @@
+import json
+
 from .step import *
 
 
 
 
 
-__all__=["Rypple_Namespace"]
+__all__ = ("Rypple_Namespace",)
 
 
 
 
 
-class Rypple_Namespace(object):
-	def __new__(cls,values={},temp=False):
+class Rypple_Namespace:
+	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
+	defaults = {
+		"__temp__": Rypple_Step.temp,
+	}
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+	def __new__(cls,value={}):
 		self = object.__new__(cls)
 
-		object.__setattr__(self,"__temp__",temp)
+
+		# If is new namespace
+		if (isinstance(value,Rypple_Namespace)):
+			values = value.values()
+
+		# If is dict
+		elif (isinstance(value,dict)):
+			values = value
+
+		# Else raise value error
+		else:
+			raise ValueError()
+
+
+		# Default values
+		for k,v in cls.defaults.items():
+			if (k not in values):
+				values[k] = v
+
+
+		# Set values attribute
 		object.__setattr__(self,"__values__",dict(values))
+
 
 		return self
 
@@ -23,10 +56,17 @@ class Rypple_Namespace(object):
 
 
 
+
+	def __len__(self):
+		return len(self.values().keys())
+
+
+
+
+
 	# ~~~~~~~~ Attr Assignment ~~~~~~~
 	def __getattr__(self,attr):
-		d = self.__dict__
-		v = d["__values__"]
+		v = self.values()
 
 		return v.get(attr)
 
@@ -35,22 +75,28 @@ class Rypple_Namespace(object):
 
 
 	def __setattr__(self,attr,val):
-		d = self.__dict__["__values__"]
-		d[attr] = val
+		v = self.values()
+		
+		v[attr] = val
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~ Item Assignment ~~~~~~~
 	def __getitem__(self,attr):
-		p = attr.split(".")
+		# Get path
+		path = attr.split(".")
 
-		if (len(p) > 1):
-			attr = p.pop(-1)
-			s = self.parent(p)
+		if (len(path) > 1):
+			# Get final attribute
+			attr = path[-1]
 
-			if (s != None):
-				return Rypple_Namespace.__getattr__(s,attr)
+			# Get parent
+			parent = self.parent(path)
+
+			if (parent != None):
+				return Rypple_Namespace.__getattr__(parent,attr)
+
 
 		else:
 			return self.__getattr__(attr)
@@ -60,14 +106,19 @@ class Rypple_Namespace(object):
 
 
 	def __setitem__(self,attr,value):
-		p = attr.split(".")
+		# Get path
+		path = attr.split(".")
 
-		if (len(p) > 1):
-			attr = p.pop(-1)
-			s = self.parent(p)
+		if (len(path) > 1):
+			# Get final attribute
+			attr = path[-1]
 
-			if (s != None):
-				return Rypple_Namespace.__setattr__(s,attr,value)
+			# Get parent
+			parent = self.parent(path)
+
+			if (parent != None):
+				return Rypple_Namespace.__setattr__(parent,attr,value)
+
 
 		else:
 			self.__setattr__(attr,value)
@@ -77,16 +128,24 @@ class Rypple_Namespace(object):
 
 	# ~~~~~~~~~~~ Functions ~~~~~~~~~~
 	def values(self):
-		return self.__dict__["__values__"]
+		d = self.__dict__
+		v = d["__values__"]
+
+		return v
 
 
 
 
 
 	def keys(self):
-		return tuple(
-			self.__dict__["__values__"].keys()
-		)
+		return tuple(self.values().keys())
+
+
+
+
+
+	def items(self):
+		return self.values().items()
 		
 
 
@@ -94,44 +153,57 @@ class Rypple_Namespace(object):
 
 
 	def contains(self,attr):
-		p = attr.split(".")
+		# Get path
+		path = attr.split(".")
 
-		if (len(p) > 1):
-			attr = p.pop(-1)
-			s = self.parent(p)
+		if (len(path) > 1):
+			# Get final attribute
+			attr = path[-1]
 
-			if (s != None):
-				return s.contains(attr)
+			# Get parent
+			parent = self.parent(path)
+
+			if (parent != None):
+				return parent.contains(attr)
 
 		else:
-			return (attr in self.__dict__["__values__"])
+			return (attr in self.values())
 
 
 
 
 
 	def parent(self,path):
-		s = self
-		
-		for i,a in enumerate(path):
-			v = s[a]
-
-			if (isinstance(v,Rypple_Namespace)):
-				s = v
-
-			else:
-				s = None
-				break
+		# Default parent
+		parent = None
 
 
-		return s
+		if (len(path) > 0):
+			# Set parent
+			parent = self
+			
+			for i,a in enumerate(path[:-1]):
+				# Get value in namespace
+				val = parent[a]
+
+				if (isinstance(val,Rypple_Namespace)):
+					# Set new parent
+					parent = val
+
+				else:
+					# Doesn't exist or invalid value
+					parent = None
+					break
+
+
+		return parent
 
 
 
 
 
 	def pop(self,attr):
-		v= self.__dict__["__values__"]
+		v = self.values()
 
 		if (attr in v):
 			return v.pop(attr)
@@ -139,27 +211,30 @@ class Rypple_Namespace(object):
 
 
 
-	def removeTemps(self):
-		def call(ns):
-			for k in ns.keys():
-				v = ns[k]
 
+	def resolve(self):
+		def removeTemps(parent):
+			# Get values
+			values = parent.values()
+
+
+			# Iterate through values
+			for k in tuple(values.keys()):
+				v = values[k]
+
+				# If namespace
 				if (isinstance(v,Rypple_Namespace)):
 					if (v.__temp__):
-						ns.pop(k)
+						values.pop(k)
 
 					else:
-						call(v)
-
-
-				elif (isinstance(v,Rypple_Step)):
-					if (v.temp):
-						ns.pop(k)
+						# Iterate through next namespace
+						removeTemps(v)
 
 
 
-
-		call(self)
+		# Remove all temps
+		removeTemps(self)
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -168,8 +243,8 @@ class Rypple_Namespace(object):
 	def toJSON(self):
 		out = {}
 
-		for k,v in self.values().items():
-			if (isinstance(v,(type(self),Rypple_Step))):
+		for k,v in self.items():
+			if (isinstance(v,(Rypple_Namespace,Rypple_Step))):
 				out[k] = v.toJSON()
 
 			else:
@@ -180,5 +255,66 @@ class Rypple_Namespace(object):
 
 
 
+	# ~~~~~~~~~~~~~ Print ~~~~~~~~~~~~
+	def print(self):
+		# Convert to JSON
+		jsonData = self.toJSON()
+
+		# Dump data to string
+		data = json.dumps(jsonData,indent=4)
+
+		# Print data
+		print(data)
+
+
+
+
+
+
+	def printList(self):
+		def call(parent,namespace):
+
+			# Default signs
+			signs = ""
+
+			# Temp sign
+			if (namespace.__temp__):
+				signs += "~"
+
+			# Run sign
+			if (namespace.__run__):
+				signs += "@"
+
+
+			# Thread sign
+			if (namespace.__thread__):
+				signs += "*"
+
+
+			for k,v in namespace.items():
+				# If not a hidden default value
+				if (k not in Rypple_Namespace.defaults):
+					# Format path
+					path = f"{parent}.{k}".strip(".")
+
+					# Get path indentation
+					c = path.count(".")
+
+
+					# If value is another namespace
+					if (isinstance(v,Rypple_Namespace)):
+						print(("\t" * c) + signs + path + ":")
+
+						# Iterate through new namespace
+						call(path,v)
+
+					else:
+						print(("\t" * c) + signs + path + f": {v}")
+
+
+
+		# Initialize iteration
+		call("",self)
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

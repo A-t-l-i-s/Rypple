@@ -1,13 +1,23 @@
-Extension: Console
 Extension: RyPile
-Extension: Python
 
 
 
+~Function: main
+	Print: Integer Max
+	Print: int.max
 
 
 
-Include: extra
+Include: ./tests/import
+
+
+
+Call: main
+
+
+Import: sys
+
+a: sys.path
 
 
 

@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+from pathlib import Path
 from typing import Iterable
 
 from ..extension import *
@@ -30,6 +31,7 @@ class Extension(Rypple_Extension):
 				"args": [],
 				"exe": None,
 				"env": dict(os.environ),
+				"ext": None,
 			},
 			True
 		)
@@ -83,7 +85,7 @@ class Extension(Rypple_Extension):
 						env=scope.variables.rypile.env
 					)
 
-					if (scope.variables.rypile.wait > 0):
+					if (scope.variables.rypile.wait):
 						process.wait()
 
 				except:
@@ -106,13 +108,29 @@ class Extension(Rypple_Extension):
 
 		def callback(cls,step,scope,namespace):
 			if (not step.isCmd()):
+				# If extension as loaded
+				ext = scope.variables.rypile.ext
 
+				if (issubclass(ext,Rypple_Extension)):
+					if (ext.name in scope.loadedExtensions):
+						scope.variables.rypile.ext = None
+
+						scope.loadedExtensions.pop(ext.name)
+
+
+
+				# Set args
 				args = [scope.variables.rypile.exe]
 
+
+
+				# Iterate through rypile args
 				for a in scope.variables.rypile.args:
 					args.append(str(a))
 
 
+
+				# If popout program
 				if (scope.variables.rypile.popout):
 					creationFlags = subprocess.CREATE_NEW_CONSOLE
 
@@ -120,6 +138,8 @@ class Extension(Rypple_Extension):
 					creationFlags = 0x00
 
 
+
+				# Create new process
 				try:
 					process = subprocess.Popen(
 						args,
@@ -127,11 +147,16 @@ class Extension(Rypple_Extension):
 						env=scope.variables.rypile.env
 					)
 
-					if (scope.variables.rypile.wait > 0):
+					if (scope.variables.rypile.wait):
 						process.wait()
 
 				except:
 					return Unknown()
+
+
+				# Clear args
+				scope.variables.rypile.args.clear()
+			
 			else:
 				return Unknown()
 
@@ -184,6 +209,35 @@ class Extension(Rypple_Extension):
 			if (not step.isCmd()):
 				scope.variables.rypile.args.clear()
 
+			else:
+				return Unknown()
+
+
+
+
+	"""
+		Description: ...
+		Parameters: ...
+	"""
+	class Directory(Rypple_ExtensionKey):
+		name = "Directory"
+		enabled = True
+
+
+		def callback(cls,step,scope,namespace):
+			if (step.isCmd()):
+				value = scope.evaluate(step.value,namespace)
+
+				if (isinstance(value,str)):
+					path = Path(value)
+
+					if (path.is_dir()):
+						os.chdir(path)
+
+					else:
+						return Unknown()
+				else:
+					return Unknown()
 			else:
 				return Unknown()
 
