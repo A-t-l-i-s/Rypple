@@ -213,28 +213,41 @@ class Rypple_Namespace:
 
 
 	def resolve(self):
-		def removeTemps(parent):
-			# Get values
-			values = parent.values()
-
-
+		def removeTemps(values):
 			# Iterate through values
-			for k in tuple(values.keys()):
+			if (isinstance(values,dict)):
+				keys = tuple(values.keys())
+			else:
+				keys = range(len(values))
+
+
+			for k in keys:
 				v = values[k]
 
 				# If namespace
 				if (isinstance(v,Rypple_Namespace)):
 					if (v.__temp__):
+						# Remove namespace
 						values.pop(k)
 
 					else:
 						# Iterate through next namespace
-						removeTemps(v)
+						removeTemps(v.values())
+
+
+				elif (isinstance(v,Rypple_Step)):
+					if (v.temp):
+						# Remove step
+						values.pop(k)
+
+					else:
+						# Iterate through next steps
+						removeTemps(v.children)
 
 
 
 		# Remove all temps
-		removeTemps(self)
+		removeTemps(self.values())
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

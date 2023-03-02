@@ -1,4 +1,5 @@
 import re
+import glob
 from pathlib import Path
 
 from .step import *
@@ -24,6 +25,8 @@ class Rypple:
 	tempSign: str = "~"
 	threadSign: str = "*"
 
+	includePaths = []
+
 
 
 	# Regex patterns
@@ -40,6 +43,10 @@ class Rypple:
 
 
 
+	loopVar: str = "i"
+
+
+
 	# Rypple file extensions
 	fileExtensions = (
 		# Bytecode
@@ -50,6 +57,39 @@ class Rypple:
 		".ryp",
 		".rypl",
 	)
+
+
+
+
+
+	@classmethod
+	def findFile(cls,name,path,traverse = False):
+		paths = [
+			path,
+			*cls.includePaths
+		]
+
+
+		# Traverse through entire directory
+		if (traverse):
+			name = "**/" + name
+
+
+		for path in paths:
+			path = Path(path)
+
+			for e in (*cls.fileExtensions, ""):
+				# Crate glob pattern
+				n = name + e
+
+				for f in path.glob(n):
+					# Resolve path
+					f = f.resolve()
+					
+					# Return found path
+					return f
+
+
 
 
 
@@ -75,7 +115,6 @@ class Rypple:
 				steps = cls.parse(outData)
 				
 				return steps
-
 
 
 
@@ -231,9 +270,9 @@ class Rypple:
 						# If include step
 						if (key == "Include"):
 							if (value != None):
-								for ext in ("",*cls.fileExtensions):
-									path = Path(value + ext)
+								path = cls.findFile(value,".")
 
+								if (path != None):
 									if (path.is_file()):
 										includeBase = cls.readFile(path)
 
@@ -242,15 +281,12 @@ class Rypple:
 										# Get import name
 										name = path.stem
 
+
 										# Format import name
 										includeBase.key = name
 
 
 										steps += includeBase.children
-
-
-										# Break loop
-										break
 
 						else:
 							steps.append(firstStep)

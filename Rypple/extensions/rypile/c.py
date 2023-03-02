@@ -13,7 +13,7 @@ __all__ = ("Extension",)
 
 
 
-@Name("RyPile.Python")
+@Name("RyPile.C")
 @Description("")
 @Enabled(True)
 class Extension(Rypple_Extension):
@@ -32,7 +32,7 @@ class Extension(Rypple_Extension):
 
 		# Set args
 		rypile.args.clear()
-		rypile.exe = "py"
+		rypile.exe = "gcc"
 
 
 
@@ -55,6 +55,113 @@ class Extension(Rypple_Extension):
 
 			if (isinstance(value,str)):
 				rypile.args.append(value)
+			else:
+				return Rypple_Exception.TypeError(type(value)) # Invalid Type
+		else:
+			return Rypple_Exception.NoValue() # No Value
+
+
+
+
+
+
+
+
+	@Name("Bit")
+	@Description("")
+	@Enabled(True)
+	def Bit(cls,step,scope,namespace):
+		# Rypile namespace
+		rypile = scope.variables.rypile
+
+
+		if (step.hasValue()):
+			value = scope.evaluate(step.value,namespace = namespace)
+
+
+			if (isinstance(value,int)):
+				rypile.args.append(f"-m{value}")
+
+			else:
+				return Rypple_Exception.TypeError(type(value)) # Invalid Type
+		else:
+			return Rypple_Exception.NoValue() # No Value
+
+
+
+
+
+
+
+
+	@Name("IncludePath")
+	@Description("")
+	@Enabled(True)
+	def IncludePath(cls,step,scope,namespace):
+		# Rypile namespace
+		rypile = scope.variables.rypile
+
+
+		if (step.hasValue()):
+			value = scope.evaluate(step.value,namespace = namespace)
+
+
+			if (isinstance(value,str)):
+				rypile.args.append(f"-I{value}")
+
+			else:
+				return Rypple_Exception.TypeError(type(value)) # Invalid Type
+		else:
+			return Rypple_Exception.NoValue() # No Value
+
+
+
+
+
+
+
+
+	@Name("LibraryPath")
+	@Description("")
+	@Enabled(True)
+	def LibraryPath(cls,step,scope,namespace):
+		# Rypile namespace
+		rypile = scope.variables.rypile
+
+
+		if (step.hasValue()):
+			value = scope.evaluate(step.value,namespace = namespace)
+
+
+			if (isinstance(value,str)):
+				rypile.args.append(f"-L{value}")
+
+			else:
+				return Rypple_Exception.TypeError(type(value)) # Invalid Type
+		else:
+			return Rypple_Exception.NoValue() # No Value
+
+
+
+
+
+
+
+
+	@Name("Library")
+	@Description("")
+	@Enabled(True)
+	def Library(cls,step,scope,namespace):
+		# Rypile namespace
+		rypile = scope.variables.rypile
+
+
+		if (step.hasValue()):
+			value = scope.evaluate(step.value,namespace = namespace)
+
+
+			if (isinstance(value,str)):
+				rypile.args.append(f"-l{value}")
 
 			else:
 				return Rypple_Exception.TypeError(type(value)) # Invalid Type
@@ -80,8 +187,8 @@ class Extension(Rypple_Extension):
 			value = scope.evaluate(step.value,namespace = namespace)
 
 
-			if (isinstance(value,(str,float,int))):
-				rypile.args.append(f"-{value}")
+			if (isinstance(value,str)):
+				rypile.args.append(f"--std={value}")
 
 			else:
 				return Rypple_Exception.TypeError(type(value)) # Invalid Type
@@ -95,14 +202,14 @@ class Extension(Rypple_Extension):
 
 
 
-	@Name("DontWriteBytecode")
+	@Name("Shared")
 	@Description("")
 	@Enabled(True)
-	def DontWriteBytecode(cls,step,scope,namespace):
+	def Shared(cls,step,scope,namespace):
 		# Rypile namespace
 		rypile = scope.variables.rypile
 
-		cmd = "-B"
+		cmd = "-shared"
 
 
 		if (step.hasValue()):
@@ -128,14 +235,41 @@ class Extension(Rypple_Extension):
 
 
 
-	@Name("Debug")
+	@Name("Compression")
 	@Description("")
 	@Enabled(True)
-	def Debug(cls,step,scope,namespace):
+	def Compression(cls,step,scope,namespace):
 		# Rypile namespace
 		rypile = scope.variables.rypile
 
-		cmd = "-d"
+
+		if (step.hasValue()):
+			value = scope.evaluate(step.value,namespace = namespace)
+
+
+			if (isinstance(value,int)):
+				rypile.args.append(f"-O{value}")
+
+			else:
+				return Rypple_Exception.TypeError(type(value)) # Invalid Type
+		else:
+			return Rypple_Exception.NoValue() # No Value
+
+
+
+
+
+
+
+
+	@Name("NoConsole")
+	@Description("")
+	@Enabled(True)
+	def NoConsole(cls,step,scope,namespace):
+		# Rypile namespace
+		rypile = scope.variables.rypile
+
+		cmd = "-Wl,-subsystem,windows"
 
 
 		if (step.hasValue()):
@@ -161,14 +295,14 @@ class Extension(Rypple_Extension):
 
 
 
-	@Name("Unbuffered")
+	@Name("Static")
 	@Description("")
 	@Enabled(True)
-	def Unbuffered(cls,step,scope,namespace):
+	def Static(cls,step,scope,namespace):
 		# Rypile namespace
 		rypile = scope.variables.rypile
 
-		cmd = "-u"
+		cmd = "-static"
 
 
 		if (step.hasValue()):
@@ -194,10 +328,10 @@ class Extension(Rypple_Extension):
 
 
 
-	@Name("Option")
+	@Name("Out")
 	@Description("")
 	@Enabled(True)
-	def Option(cls,step,scope,namespace):
+	def Out(cls,step,scope,namespace):
 		# Rypile namespace
 		rypile = scope.variables.rypile
 
@@ -207,40 +341,12 @@ class Extension(Rypple_Extension):
 
 
 			if (isinstance(value,str)):
-				rypile.args += "-X", value
+				rypile.args.append(f"-o{value}")
 
 			else:
 				return Rypple_Exception.TypeError(type(value)) # Invalid Type
 		else:
 			return Rypple_Exception.NoValue() # No Value
-
-
-
-
-
-
-
-
-	@Name("Compile")
-	@Description("")
-	@Enabled(True)
-	def Compile(cls,step,scope,namespace):
-		# Rypile namespace
-		rypile = scope.variables.rypile
-
-
-		if (step.hasValue()):
-			value = scope.evaluate(step.value,namespace = namespace)
-
-
-			if (isinstance(value,str)):
-				rypile.args += "-c", value
-
-			else:
-				return Rypple_Exception.TypeError(type(value)) # Invalid Type
-		else:
-			return Rypple_Exception.NoValue() # No Value
-
 
 
 

@@ -46,6 +46,25 @@ class Rypple_Exception:
 
 
 
+	@classmethod
+	def NoValue(cls):
+		return Rypple_Error("No value present")
+
+
+	@classmethod
+	def HasValue(cls):
+		return Rypple_Error("Can't accept values")
+
+
+	@classmethod
+	def TypeError(cls,t):
+		return Rypple_Error(f"Invalid type '{t.__name__}'")
+
+
+
+
+
+
 
 
 class Rypple_Critical(Rypple_Exception):

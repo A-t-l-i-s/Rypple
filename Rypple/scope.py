@@ -6,9 +6,11 @@ import threading
 import traceback
 import importlib, importlib.util
 from pathlib import Path
+from typing import Iterable
 
 from .__init__ import *
 from .namespace import *
+from .extension import *
 from .exceptions import *
 
 
@@ -127,6 +129,9 @@ class Rypple_Scope:
 
 
 	# ~~~~~~~~~~ Initialize ~~~~~~~~~~
+	"""
+		Initialize Rypple_Scope by creating required variables for the scope to operate
+	"""
 	def __init__(self):
 		# Variables
 		self.variables: Rypple_Namespace = Rypple_Namespace({
@@ -140,7 +145,9 @@ class Rypple_Scope:
 			"step": None,
 			"file": "dummy",
 
-			"debug": False
+			"debug": False,
+			"showLogs": False,
+			"runCommands": True
 		})
 
 
@@ -163,6 +170,14 @@ class Rypple_Scope:
 
 
 	# ~~~~~~~~~~ Compilation ~~~~~~~~~
+	"""
+		Compiles Rypple_Steps in the current scope
+
+		@base : Rypple_Step = The first step to be compiled usually the base of children steps
+		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to (Do not use to start)
+
+		@return : bool = Whether the program exiting properly wihtout any critical errors
+	"""
 	def run(self,base,*,namespace=None):
 		index = 0
 		size = len(base.children)
@@ -178,7 +193,7 @@ class Rypple_Scope:
 		while (index < size):
 			# If exit code is greater than -1 exit program
 			if (self.constants.exit > -1):
-				break
+				return False
 
 
 
@@ -191,33 +206,41 @@ class Rypple_Scope:
 
 
 
+			# If key is Break and no value is present then break current loop
+			if (key == "Break"):
+				if (not step.hasValue()):
+					return False
+
+
+
 			# Find key in extensions
 			foundExtension = False
 
-			for k,v in self.loadedExtensions.items():
-				# Get command
-				command = v.get(key)
+			if (self.constants.runCommands):
+				for k,v in self.loadedExtensions.items():
+					# Get command
+					command = v.get(key)
 
-				# If command is present
-				if (command != None):
-					foundExtension = True
-
-
-					# Call command
-					self.callFunction(
-						command,
-						(
-							v,
-							step,
-							self,
-							namespace
-						),
-						{},
-						thread = step.thread
-					)
+					# If command is present
+					if (command != None):
+						foundExtension = True
 
 
-					break
+						# Call command
+						self.callFunction(
+							command,
+							(
+								v,
+								step,
+								self,
+								namespace
+							),
+							{},
+							thread = step.thread
+						)
+
+
+						break
 
 
 
@@ -265,12 +288,21 @@ class Rypple_Scope:
 
 			# Increment step
 			index += 1
+
+
+		return True
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~~ Evaluation ~~~~~~~~~~
-	def evaluate(self,data,*,namespace=None):
+	"""
+		Evaluates string representations of values
+
+		@data : str = String representation of a value
+		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
+	"""
+	def evaluate(self,data,namespace=None):
 		if (isinstance(data,str)):
 			# If namespace is none
 			if (namespace == None):
@@ -308,7 +340,16 @@ class Rypple_Scope:
 
 
 
-	def evaluateVar(self,key,data,namespace):
+	"""
+		Evauates and sets variable as the evaluate value
+
+		@key : str = Variable name
+		@data : str = String representation of a value
+		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
+
+		@return : null
+	"""
+	def evaluateVar(self,key,data,namespace = None):
 		# Evaluate data
 		value = self.evaluate(
 			data,
@@ -316,13 +357,89 @@ class Rypple_Scope:
 		)
 
 		# Set var
-		namespace[key] = value
+		self.setVar(
+			key,
+			value,
+			namespace = namespace
+		)
+
+
+
+
+
+	"""
+		Sets a variable into the scope accordingly
+		Check if variable exists in global scope and determine if it's a namespace then set that variable
+		
+		@key : str = Variable name
+		@value : any = The value the variable is setting
+		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
+		
+		@return : null
+	"""
+	def setVar(self,key,value,namespace = None):
+		# If not namespace
+		if (namespace != None):
+			# If variable name in globals
+			if (self.variables.contains(key)):
+				# If variable is a path
+				if ("." in key):
+					# If the local namespace doesn't have the variable
+					if (not namespace.contains(key)):
+						# Set global variable
+						self.variables[key] = value
+
+						return
+
+
+			# Set local variable
+			namespace[key] = value
+
+		else:
+			# Set global variable
+			self.variables[key] = value
+
+
+
+
+
+	"""
+		Load an extension into current scope
+
+		@ext : str/Rypple_Extension = Extension to load
+
+		@return : null
+	"""
+	def loadExtension(self,ext):
+		# If ext is a string then get extension from extensions list
+		if (isinstance(ext,str)):
+			ext = self.extensions.get(ext)
+
+
+
+		# Check if ext is a Rypple_Extension
+		if (issubclass(ext,Rypple_Extension)):
+			# Initialize extension
+			ext.init(ext,self)
+
+			# Add extension
+			self.loadedExtensions[ext.name] = ext
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~~~~ Threads ~~~~~~~~~~~
-	def callFunction(self,func,args,kwargs,*,thread=False):
+	"""
+		Calls a function and logs its progress if debug is True
+
+		@func : function = The function being called
+		@args : list/tuple = Normal arguments
+		@kargs : dict = Keyword arguments
+		@thread : bool = If thread shold be ran in a seperate thread
+
+		@return : null
+	"""
+	def callFunction(self,func,args,kwargs,thread=False):
 		if (thread):
 			# Create thread
 			newThread = threading.Thread(
@@ -352,35 +469,60 @@ class Rypple_Scope:
 		else:
 			try:
 				# Call function
-				ret = func(
-					*args,
-					**kwargs
-				)
+				ret = func(*args,**kwargs)
 
 			except:
-				ret = Rypple_Error(f"Failed to run '{func.__name__}'\n{traceback.format_exc()}")
+				ret = Rypple_Error(f"Failed to run '{func.__name__}'\n{traceback.format_exc()}") # Failed to call function
+
+
+
+			# If value returned is an iterable object convert that object to a tuple
+			if (isinstance(ret,Iterable)):
+				rets = tuple(ret)
+
+			# Else make a single item tuple with the value inside
+			else:
+				rets = (ret,)
 
 
 
 			# If return type is an exception
-			if (isinstance(ret,Rypple_Exception)):
+			for r in rets:
+				if (isinstance(r,Rypple_Exception)):
 
-				# If in debug mode
-				if (self.constants.debug):
-					
-					# Write data to stdout
-					sys.stdout.write(ret.text + "\n")
-
-
-				# Exit program if citical error
-				if (isinstance(ret,Rypple_Critical)):
-					self.constants.exit = 1
+					# If in debug mode
+					if (self.constants.debug):
+						if (isinstance(r,Rypple_Log)):
+							if (self.constants.showLogs):
+								sys.stdout.write(r.text + "\n")
+								sys.stdout.flush()
 
 
+						else:
+						
+							# Write data to stdout and flush it
+							sys.stdout.write(r.text + "\n")
+							sys.stdout.flush()
+
+
+					# Exit program if citical error
+					if (isinstance(r,Rypple_Critical)):
+						self.constants.exit = 1
+
+						# Write critical to stdout and flush it
+						sys.stdout.write(r.text + "\n")
+						sys.stdout.flush()
 
 
 
 
+
+
+	"""
+		Wait and join all scope threads to finish before closing
+
+		@return : null
+	"""
 	def wait(self):
 		# Iterate until all threads are closed
 		for t in self.threads:

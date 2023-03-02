@@ -13,7 +13,7 @@ DontWriteBytecode
 Option: dev
 Option: importtime
 
-File: dummy.py
+Compile: print("Hewo")
 
 
 Done
