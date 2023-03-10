@@ -1,0 +1,14 @@
+Extension: RyPile
+Extension: RyPile.Python
+
+
+
+DontWritBytecode
+Unbuffered
+
+File: main.py
+
+
+
+Done
+

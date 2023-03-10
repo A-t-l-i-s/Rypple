@@ -23,8 +23,7 @@ class Rypple_Namespace:
 
 
 
-	def __new__(cls,value={}):
-		self = object.__new__(cls)
+	def __init__(self,value={}):
 
 
 		# If is new namespace
@@ -41,16 +40,13 @@ class Rypple_Namespace:
 
 
 		# Default values
-		for k,v in cls.defaults.items():
+		for k,v in self.defaults.items():
 			if (k not in values):
 				values[k] = v
 
 
 		# Set values attribute
-		object.__setattr__(self,"__values__",dict(values))
-
-
-		return self
+		object.__setattr__(self,"__values__",values)
 
 
 
@@ -203,10 +199,31 @@ class Rypple_Namespace:
 
 
 	def pop(self,attr):
-		v = self.values()
+		# Get path
+		path = attr.split(".")
 
-		if (attr in v):
-			return v.pop(attr)
+		if (len(path) > 1):
+			# Get final attribute
+			attr = path[-1]
+
+			# Get parent
+			parent = self.parent(path)
+
+			parent.pop(attr)
+
+		else:
+			self.values().pop(attr)
+
+
+
+
+	def verify(self,data):
+		for k,v in data.items():
+			if (isinstance(v,dict)):
+				v = Rypple_Namespace(v)
+
+			if (not self.contains(k)):
+				self[k] = v
 
 
 
@@ -257,13 +274,51 @@ class Rypple_Namespace:
 		out = {}
 
 		for k,v in self.items():
-			if (isinstance(v,(Rypple_Namespace,Rypple_Step))):
-				out[k] = v.toJSON()
+			if (k not in self.defaults):
+				if (isinstance(v,(Rypple_Namespace,Rypple_Step))):
+					out[k] = v.toJSON()
 
-			else:
-				out[k] = v
+				else:
+					out[k] = v
 
 		return out
+
+
+
+
+
+	def toSteps(self):
+		base = Rypple_Step(
+			key = "Base"
+		)
+
+
+		for k,v in self.items():
+			if (k not in self.defaults):
+				step = Rypple_Step(
+					key = k,
+					value = v
+				)
+
+
+				if (isinstance(v,Rypple_Namespace)):
+					step.value = None
+
+					base_ = v.toSteps()
+					step.children = base_.children
+
+
+				elif (isinstance(v,Rypple_Step)):
+					step.key = "Function"
+					step.value = k
+
+					step.children = v.children
+
+
+				base.children.append(step)
+
+
+		return base
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -293,15 +348,6 @@ class Rypple_Namespace:
 			# Temp sign
 			if (namespace.__temp__):
 				signs += "~"
-
-			# Run sign
-			if (namespace.__run__):
-				signs += "@"
-
-
-			# Thread sign
-			if (namespace.__thread__):
-				signs += "*"
 
 
 			for k,v in namespace.items():

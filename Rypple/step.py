@@ -20,7 +20,7 @@ class Rypple_Step:
 	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
 	key:str = None
 	value:str = None
-	id:int = -1
+	id:str = -1
 	level:int = -1
 
 	temp:bool = False
@@ -35,9 +35,9 @@ class Rypple_Step:
 	@classmethod
 	def newId(cls):
 		uid = uuid.uuid1()
-		val = uid.int
+		id_ = uid.hex.lower()
 
-		return val
+		return id_
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

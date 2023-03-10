@@ -11,7 +11,7 @@ from .extension import *
 
 
 
-__all__ = ("Rypple",)
+__all__ = ("Rypple","loads","load","dumps","dump")
 
 
 
@@ -177,13 +177,7 @@ class Rypple:
 	@classmethod
 	def toSteps(cls,lines):
 		base = Rypple_Step(
-			key = "Base",
-			value = None,
-			id = -1,
-			level = -1,
-
-			temp = False,
-			thread = False
+			key = "Base"
 		)
 
 		hierarchy = [base]
@@ -326,6 +320,83 @@ class Rypple:
 
 
 		return base
+
+
+
+
+
+
+
+
+
+
+
+def loads(data,scope = None):
+	# Parse base
+	base = Rypple.parse(data)
+	
+	var = Rypple_Namespace()
+
+
+	if (base != None):
+		# Create new scope
+		if (not isinstance(scope,Rypple_Scope)):
+			scope = Rypple_Scope()
+		
+
+		scope.run(base)
+		scope.wait()
+
+		var = scope.variables
+		var.resolve()
+
+	return var
+
+
+
+
+
+def load(path,scope = None):
+	# Parse base
+	base = Rypple.readFile(path)
+
+	var = Rypple_Namespace()
+
+
+	if (base != None):
+		# Create new scope
+		if (not isinstance(scope,Rypple_Scope)):
+			scope = Rypple_Scope()
+
+
+		scope.run(base)
+		scope.wait()
+
+		var = scope.variables
+		var.resolve()
+
+
+	return var
+
+
+
+
+
+def dumps(var):
+	base = var.toSteps()
+
+	data = base.toBytecode()
+
+	return data
+
+
+
+
+
+def dump(var,file):
+	base = var.toSteps()
+
+	base.toFile(file)
 
 
 

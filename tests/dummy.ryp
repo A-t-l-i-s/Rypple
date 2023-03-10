@@ -1,24 +1,19 @@
-Extension: Console
-Extension: RyPile
+
+
+Grettings:
+	_4: FML
+	_5: True
+	_6: 6.9
+	KMS: True
 
 
 
-Extension: RyPile.Python
-
-
-Version: "3.10"
-
-DontWriteBytecode
-
-Option: dev
-Option: importtime
-
-File: dummy.py
-
-
-Done
+Function: main
+	hewo: True
 
 
 
-
+index: 0
+For: range(10)
+	index: i + index
 
