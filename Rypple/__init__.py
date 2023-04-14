@@ -1,4 +1,5 @@
 import re
+import os
 import glob
 from pathlib import Path
 
@@ -95,26 +96,35 @@ class Rypple:
 
 	@classmethod
 	def readFile(cls,path):
-		path = Path(path)
+		if (isinstance(path,(str,os.PathLike))):
+			path = Path(path)
 
-		if (path.is_file()):
-			with path.open("rb") as file:
-				data = file.read()
+			file = path.open("rb")
 
-				outData = None
-
-
-				try:
-					outData = data[:10].decode("utf-8")
-					outData += data[10:].decode("utf-8")
-
-				except:
-					outData = data
+		else:
+			file = path
 
 
-				steps = cls.parse(outData)
-				
-				return steps
+		# Read data
+		data = file.read()
+
+		# Close file
+		file.close()
+
+		outData = None
+
+
+		try:
+			outData = data[:10].decode("utf-8")
+			outData += data[10:].decode("utf-8")
+
+		except:
+			outData = data
+
+
+		steps = cls.parse(outData)
+		
+		return steps
 
 
 
@@ -335,7 +345,7 @@ def loads(data,scope = None):
 	# Parse base
 	base = Rypple.parse(data)
 	
-	var = Rypple_Namespace()
+	var = Rypple_Namespace({})
 
 
 	if (base != None):
@@ -360,7 +370,7 @@ def load(path,scope = None):
 	# Parse base
 	base = Rypple.readFile(path)
 
-	var = Rypple_Namespace()
+	var = Rypple_Namespace({})
 
 
 	if (base != None):

@@ -23,7 +23,7 @@ class Rypple_Namespace:
 
 
 
-	def __init__(self,value={}):
+	def __init__(self,value):
 
 
 		# If is new namespace
