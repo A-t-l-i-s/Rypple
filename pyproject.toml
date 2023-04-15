@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "orjson", "colorama"]
+build-backend = "setuptools.build_meta"
+
+
+
+[project]
+name = "Rypple"
+version = "0.1.1"
+description = ""
+
+authors = [
+	{name = "Anthony Markovitz", email = "anthonym6013@gmail.com"}
+]
+
+readme = "README.md"
+requires-python = ">=3"
+
+classifiers = [
+]
+
+
+
+[project.urls]
+Homepage = "https://github.com/A-t-l-i-s/Rypple"
+"Bug Tracker" = "https://github.com/A-t-l-i-s/Rypple/issues"
+
+
+

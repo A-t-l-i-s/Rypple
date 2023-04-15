@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: Rypple
+Version: 0.1.1
+Author-email: Anthony Markovitz <anthonym6013@gmail.com>
+Project-URL: Homepage, https://github.com/A-t-l-i-s/Rypple
+Project-URL: Bug Tracker, https://github.com/A-t-l-i-s/Rypple/issues
+Requires-Python: >=3
+Description-Content-Type: text/markdown
+License-File: LICENSE
