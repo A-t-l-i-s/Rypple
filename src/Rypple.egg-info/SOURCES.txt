@@ -11,6 +11,7 @@ src/Rypple/step.py
 src/Rypple.egg-info/PKG-INFO
 src/Rypple.egg-info/SOURCES.txt
 src/Rypple.egg-info/dependency_links.txt
+src/Rypple.egg-info/requires.txt
 src/Rypple.egg-info/top_level.txt
 src/Rypple/extensions/console.py
 src/Rypple/extensions/core.py
