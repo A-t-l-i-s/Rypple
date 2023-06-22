@@ -1,181 +1,142 @@
 import re
-import os
-import glob
+import uuid
+
 from pathlib import Path
 
-from .step import *
+from RFTLib.Core.Structure import *
+
 from .scope import *
-from .namespace import *
 from .extension import *
 
 
 
 
 
-__all__ = ("Rypple","loads","load","dumps","dump")
+__all__ = ("Rypple", "Rypple_Scope", "Rypple_Extension")
 
 
 
 
 
 class Rypple:
-	# Code delimiter
+	# ~~~~~~~~~~ Variables ~~~~~~~~~~~
+	maxLevel: int = 9999
+
 	delimiter: str = ":"
-	comment: str = "#"
 
-	tempSign: str = "~"
-	threadSign: str = "*"
-
-	includePaths = []
-
-
-
-	# Regex patterns
-	keyPattern: re.Pattern = re.compile(r"[A-Za-z\_][A-Za-z0-9\_\.]*")
-
-	signsPattern: re.Pattern = re.compile(rf"[{tempSign}{threadSign}]*")
-
-	stepPattern: re.Pattern = re.compile(rf"^(?P<Level>\s*)(?P<Signs>{signsPattern.pattern})(?P<Key>{keyPattern.pattern})((\s*)({delimiter})(\s*)(?P<Value>.*))?(\s*)$")
+	tempChar: str = "~"
+	threadChar: str = "*"
+	commandChar: str = "@"
+	
+	macroChar: str = "$"
+	joinerChar: str = "^"
+	commentChar: str = ">"
 
 
-
-	# Max level of indentation
-	maxLevel = 999
-
-
-
-	loopVar: str = "i"
+	macros:dict = {}
+	includedFiles:list = []
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
 
 
+	# ~~~~~~~~~~~~ Paths ~~~~~~~~~~~~~
+	includePaths:list = []
 
-	# Rypple file extensions
-	fileExtensions = (
-		# Bytecode
-		".ryc",
-		".rycl",
-
-		# Text Code
+	fileExtensions:list = [
 		".ryp",
 		".rypl",
+
+		".ryc",
+		".rycl",
+	]
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+	# ~~~~~~~~ Regex Patterns ~~~~~~~~
+	keyPattern: re.Pattern = re.compile(
+		r"[A-Za-z\_][\w\.]*"
 	)
 
+	signsPattern: re.Pattern = re.compile(
+		rf"[{tempChar}{threadChar}{commandChar}]*"
+	)
+
+	framePattern: re.Pattern = re.compile("".join((
+		r"^(?P<Level>\s*)",
+			rf"(?P<Signs>{signsPattern.pattern})",
+			rf"(?P<Key>{keyPattern.pattern})",
+				rf"((\s*)({delimiter})(\s*)(?P<Value>.*))?",
+		r"(\s*)$",
+	)))
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
+	# ~~~~~~ Structure Defaults ~~~~~~
+	frameDefaults = RFT_Structure({
+		"key": None,
+		"value": None,
+		"id": -1,
+		"level": -1,
 
-	@classmethod
-	def findFile(cls,name,path,traverse = False):
-		paths = [
-			path,
-			*cls.includePaths
-		]
+		"temp": False,
+		"thread": False,
+		"command": False,
 
-
-		# Traverse through entire directory
-		if (traverse):
-			name = "**/" + name
-
-
-		for path in paths:
-			path = Path(path)
-
-			for e in (*cls.fileExtensions, ""):
-				# Crate glob pattern
-				n = name + e
-
-				for f in path.glob(n):
-					# Resolve path
-					f = f.resolve()
-					
-					# Return found path
-					return f
-
-
-
-
-
-	@classmethod
-	def readFile(cls,path):
-		if (isinstance(path,(str,os.PathLike))):
-			path = Path(path)
-
-			file = path.open("rb")
-
-		else:
-			file = path
-
-
-		# Read data
-		data = file.read()
-
-		# Close file
-		file.close()
-
-		outData = None
-
-
-		try:
-			outData = data[:10].decode("utf-8")
-			outData += data[10:].decode("utf-8")
-
-		except:
-			outData = data
-
-
-		steps = cls.parse(outData)
-		
-		return steps
+		"children": []
+	})
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 
 
 	@classmethod
-	def parse(cls,data):
-		# Convert string to steps
-		if (isinstance(data,str)):
+	def readFile(cls, path):
+		path = Path(path)
+
+		if (path.exists() and path.is_file()):
+			with path.open("r") as file:
+				data = file.read()
+
+			# Split data into lines
 			lines = cls.toLines(data)
-			steps = cls.toSteps(lines)
 
+			base = cls.toFrames(lines)
 
-		# Convert bytecode to steps
-		elif (isinstance(data,(bytes,bytearray))):
-			steps = Rypple_Step.fromBytecode(data)
-
-
+			return base
 		else:
-			steps = None
-
-
-		return steps
+			raise OSError("File doesn't exist.")
 
 
 
 
 
 	@classmethod
-	def validVar(cls,var):
-		if (isinstance(var,str)):
-			match = cls.keyPattern.fullmatch(var)
-
-			if (match):
-				return True
-
-			return False
-
-
-
-
-
-	@classmethod
-	def toLines(cls,data):
+	def toLines(cls, data):
 		lines = []
 
-
 		for line in data.split("\n"):
-			if (not line.startswith(cls.comment)):
-				if (line.strip()):
-					lines.append(line)
+			lineStrip = line.strip()
+			
+			if (lineStrip):
+				if (not lineStrip.startswith(cls.commentChar)):
+					# If line belongs to previous line
+					if (lineStrip.startswith(cls.joinerChar)):
+						# Get joiner index
+						index = line.index(cls.joinerChar)
+						
+						# Remove spacing and joiner character
+						newLine = line[index + 1:]
+
+						# If not first line
+						if (len(lines) > 0):
+							lines[-1] += newLine
+						else:
+							lines.append(newLine)
+					else:
+						lines.append(line)
 
 
 		return lines
@@ -185,42 +146,57 @@ class Rypple:
 
 
 	@classmethod
-	def toSteps(cls,lines):
-		base = Rypple_Step(
-			key = "Base"
+	def toFrames(cls, lines:list | str):
+		base = RFT_Structure(
+			{
+				"key": "Base"
+			},
+			defaults = cls.frameDefaults
 		)
+
 
 		hierarchy = [base]
 		previous = base
 
 
 
+		# If lines in a single string
+		if (isinstance(lines, str)):
+			lines = [lines]
+
+
+
+		# Iterate through all lines
 		for line in lines:
-			# Search for line
-			match = cls.stepPattern.match(line)
+			# Add macro values to line
+			for k,v in cls.macros.items():				
+				# Replace macro with value
+				line = re.sub(
+					rf"\{cls.macroChar}\[\s*{k}\s*\]", # Pattern
+					v, # Replace Value
+					line # Input String
+				)
 
 
+
+			# Regex match to frame pattern
+			match = cls.framePattern.match(line)
 
 			if (match):
 				# Get groups
 				levelGroup = match.group("Level")
 				signsGroup = match.group("Signs")
-				keyGroup = match.group("Key")
-				valueGroup = match.group("Value")
+				
+				key = match.group("Key")
+				value = match.group("Value")
 
 
 
-
-				# Get key an value
-				key = keyGroup
-				value = valueGroup
-
-
-
+				# If value is present
 				if (value != None):
 					value = value.strip()
 
-
+				# f values length is nothing due to strip
 				if (not value):
 					value = None
 
@@ -234,179 +210,112 @@ class Rypple:
 
 
 
+					# Create new id
+					idUUID = uuid.uuid1()
+					id_ = idUUID.hex.lower()
+
+
+
 					# Get default signs
-					temp = Rypple_Step.temp
-					thread = Rypple_Step.thread
+					temp = cls.frameDefaults.temp
+					thread = cls.frameDefaults.thread
+					command = cls.frameDefaults.command
 
 
 					# Temp sign
-					if (cls.tempSign in signsGroup):
-						temp = not Rypple_Step.temp
-
+					if (cls.tempChar in signsGroup):
+						temp = not temp
 
 					# Thread sign
-					if (cls.threadSign in signsGroup):
-						thread = not Rypple_Step.thread
+					if (cls.threadChar in signsGroup):
+						thread = not thread
 
-
+					# Command sign
+					if (cls.commandChar in signsGroup):
+						command = not command
 
 
 
 					if (level <= cls.maxLevel):
-						# All steps that will be processed
-						steps = []
+						# All frames that will be processed
+						frames = []
 
 
 
 						# Create new step
-						firstStep = Rypple_Step(
-							key = key,
-							value = value,
-							id = Rypple_Step.newId(),
-							level = level,
-							
-							temp = temp,
-							thread = thread,
+						firstFrame = RFT_Structure(
+							{
+								"key": key,
+								"value": value,
+								"id": id_,
+								"level": level,
+								
+								"temp": temp,
+								"thread": thread,
+								"command": command,
+							},
+							defaults = cls.frameDefaults
 						)
 
 
 
-						# If include step
-						if (key == "Include"):
-							if (value != None):
-								path = cls.findFile(value,".")
+						if (key == "Include" and command):
+							path = Path(value)
+							path = path.resolve()
 
-								if (path != None):
-									if (path.is_file()):
-										includeBase = cls.readFile(path)
+							if (path not in cls.includedFiles):
+								cls.includedFiles.append(path)
+							
+								# If path exists and is a file
+								if (path.exists() and path.is_file()):
+									# Read file
+									includeBase = cls.readFile(path)
 
-
-
-										# Get import name
-										name = path.stem
-
-
-										# Format import name
-										includeBase.key = name
+									# Add frames to current children
+									frames += includeBase.children
 
 
-										steps += includeBase.children
+
+						elif (key == "Macro" and command):
+							macroBase = cls.toFrames(value)
+
+							# If successfully parsed enough frames
+							if (len(macroBase.children) > 0):
+								# Get first child
+								macroFrame = macroBase.children[0]
+
+								# Add macro to list of macros
+								cls.macros[macroFrame.key] = macroFrame.value
+
 
 						else:
-							steps.append(firstStep)
+							frames.append(firstFrame)
 
 
 
-						# Iterate through each step
-						for step in steps:
-							# Get length of hirarchy
+						# Iterate through all frames
+						for frame in frames:
 							hlen = len(hierarchy)
 
-							# If the level is beyond the hierarchy extend it
+
 							if (level >= hlen):
 								dif = (level - hlen) + 1
 								hierarchy += [base] * dif
 
 
-
-							# If level is in scope of the previous step
 							if (level == previous.level + 1):
 								hierarchy[level - 1] = previous
 
 
-
-							# Get parent to step
 							parent = hierarchy[level - 1]
 							if (parent != None):
-								parent.addChild(step)
+								parent.children.append(frame)
 
 
-
-							# Set previous step
-							previous = step
-
-
-
+							previous = frame
 
 
 		return base
-
-
-
-
-
-
-
-
-
-
-
-def loads(data,scope = None):
-	# Parse base
-	base = Rypple.parse(data)
-	
-	var = Rypple_Namespace({})
-
-
-	if (base != None):
-		# Create new scope
-		if (not isinstance(scope,Rypple_Scope)):
-			scope = Rypple_Scope()
-		
-
-		scope.run(base)
-		scope.wait()
-
-		var = scope.variables
-		var.resolve()
-
-	return var
-
-
-
-
-
-def load(path,scope = None):
-	# Parse base
-	base = Rypple.readFile(path)
-
-	var = Rypple_Namespace({})
-
-
-	if (base != None):
-		# Create new scope
-		if (not isinstance(scope,Rypple_Scope)):
-			scope = Rypple_Scope()
-
-
-		scope.run(base)
-		scope.wait()
-
-		var = scope.variables
-		var.resolve()
-
-
-	return var
-
-
-
-
-
-def dumps(var):
-	base = var.toSteps()
-
-	data = base.toBytecode()
-
-	return data
-
-
-
-
-
-def dump(var,file):
-	base = var.toSteps()
-
-	base.toFile(file)
 
 
 

@@ -1,17 +1,13 @@
-import sys
-import re
-import copy
-import math
 import threading
 import traceback
-import importlib, importlib.util
-from pathlib import Path
-from typing import Iterable
 
-from .__init__ import *
-from .namespace import *
-from .extension import *
-from .exceptions import *
+from pathlib import Path
+
+from RFTLib.Core.Types import *
+from RFTLib.Core.Structure import *
+from RFTLib.Core.Decorators.Label import *
+
+from .extensions.core import Extension as Core_Extension
 
 
 
@@ -24,244 +20,132 @@ __all__ = ("Rypple_Scope",)
 
 
 class Rypple_Scope:
-	# ~~~~~~~~~~~ Variables ~~~~~~~~~~
-	# Extensions
-	extensions: list = {}
+	# ~~~~~~~~~~ Extensions ~~~~~~~~~~
+	extensions = RFT_Structure({
+	})
 
-	# Loaded extension
-	loadedExtensions: list = {}
-
-
-
-	# Builtin functions
-	builtins: dict = {
-		# ~~~~~ Vars ~~~~~
-		"__name__": 		None,
+	loadedExtensions = RFT_Structure({
+		Core_Extension.name: Core_Extension,
+	})
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
 
 
-
-		# ~~~~~ Misc ~~~~~
-		"dir": 				dir,
-		"type": 			type,
-
-
-
-		# ~~~~~ Data Types ~~~~~
-		"hex": 				hex,
-		"oct": 				oct,
-
-
-
-		# ~~~~~ Lists ~~~~~
-		"filter": 			filter,
-		"format": 			format,
-		"len": 				len,
-		"next": 			next,
-		"reversed": 		reversed,
-		"sorted": 			sorted,
-
-
-
-		# ~~~~~ Boolean ~~~~~
-		"all": 				all,
-		"any": 				any,
-		"isinstance": 		isinstance,
-		"issubclass": 		issubclass,
-
-
-
-		# ~~~~~ Attributes ~~~~~
-		"delattr": 			delattr,
-		"getattr": 			getattr,
-		"hasattr": 			hasattr,
-		"setattr": 			setattr,
-
-
-
-		# ~~~~~ Math ~~~~~
-		"abs": 				abs,
-		"divmod": 			divmod,
-		"max": 				max,
-		"min": 				min,
-		"pow": 				pow,
-		"round": 			round,
-		"sum": 				sum,
-
-		"sqrt": 			math.sqrt,
-		"ceil": 			math.ceil,
-		"floor": 			math.floor,
-		"cos": 				math.cos,
-		"sin": 				math.sin,
-		"tan": 				math.tan,
-		"rad": 				math.radians,
-		"deg": 				math.degrees,
-
-		"inf": 				math.inf,
-		"nan": 				math.nan,
-		"pi": 				math.pi,
-
-
-
-		# ~~~~~ Types ~~~~~
-		"ascii": 			ascii,
-		"bin": 				bin,
-		"bool": 			bool,
-		"bytearray": 		bytearray,
-		"bytes": 			bytes,
-		"complex": 			complex,
-		"dict": 			dict,
-		"enumerate": 		enumerate,
-		"float": 			float,
-		"iter": 			iter,
-		"list": 			list,
-		"map": 				map,
-		"object": 			object,
-		"range": 			range,
-		"repr": 			repr,
-		"set": 				set,
-		"slice": 			slice,
-		"str": 				str,
-		"tuple": 			tuple,
-		"zip": 				zip,
-	}
+	# ~~~~~~~~~~~ Functions ~~~~~~~~~~
+	builtins = RFT_Structure({
+	})
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
-	# ~~~~~~~~~~ Initialize ~~~~~~~~~~
-	"""
-		Initialize Rypple_Scope by creating required variables for the scope to operate
-	"""
 	def __init__(self):
-		# Variables
-		self.variables: Rypple_Namespace = Rypple_Namespace({
+		self.variables = RFT_Structure({})
+
+
+		self.constants = RFT_Structure({
+			"dev": RFT_Structure({
+				"exit": -1,
+				"file": "dummy",
+
+				"debug": False,
+
+				"enableBytecode": False,
+				"enableCommands": True,
+
+				"threads": [],
+			})
 		})
 
 
-
-		# Constants
-		self.constants: Rypple_Namespace = Rypple_Namespace({
-			"exit": -1,
-			"step": None,
-			"file": "dummy",
-
-			"debug": False,
-			"showLogs": False,
-			"runCommands": True
+		self.modules = RFT_Structure({
 		})
 
 
-
-		# Loaded modules
-		self.modules: Rypple_Namespace = Rypple_Namespace({
-		})
-
+		self.loadedExtensions = RFT_Structure(
+			Rypple_Scope.loadedExtensions
+		)
 
 
-		# Re-initialize extensions
-		self.loadedExtensions = dict(Rypple_Scope.loadedExtensions)
-
-
-
-		# Threads
-		self.threads:list = []
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~~ Compilation ~~~~~~~~~
-	"""
+	@RFT_Name("run")
+	@RFT_Description("""
 		Compiles Rypple_Steps in the current scope
 
 		@base : Rypple_Step = The first step to be compiled usually the base of children steps
 		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to (Do not use to start)
 
 		@return : bool = Whether the program exiting properly wihtout any critical errors
-	"""
-	def run(self,base,*,namespace=None):
+	""")
+	def run(self, base, namespace = None):
 		index = 0
 		size = len(base.children)
 
 
-
-		# If namespace is none set it to global
+		# If namespace is none
 		if (namespace == None):
 			namespace = self.variables
 
 
-
 		while (index < size):
-			# If exit code is greater than -1 exit program
-			if (self.constants.exit > -1):
+			# If exit var is anything but -1
+			if (self.constants.dev.exit != -1):
 				return False
 
 
-
-			# Get step
+			# Get step and key
 			step = base.children[index]
 			key = step.key
 
+
 			# Set constant step
-			self.constants.step = step
+			self.constants.dev.step = step
 
 
 
-			# If key is Break and no value is present then break current loop
-			if (key == "Break"):
-				if (not step.hasValue()):
-					return False
+			if (self.constants.dev.enableCommands):
+				if (step.command):
+					for k,v in self.loadedExtensions.items():
+						# Get command
+						command = v.get(step.key)
+
+
+						if (command != None):
+							# Call command
+							self.callFunction(
+								func = command,
+								args = (),
+								kwargs = {
+									"cls": v,
+									"step": step,
+									"scope": self,
+									"namespace": namespace
+								},
+								thread = step.thread
+							)
+
+							# Break loop
+							break
 
 
 
-			# Find key in extensions
-			foundExtension = False
-
-			if (self.constants.runCommands):
-				for k,v in self.loadedExtensions.items():
-					# Get command
-					command = v.get(key)
-
-					# If command is present
-					if (command != None):
-						foundExtension = True
-
-
-						# Call command
-						self.callFunction(
-							command,
-							(
-								v,
-								step,
-								self,
-								namespace
-							),
-							{},
-							thread = step.thread
-						)
-
-
-						break
-
-
-
-
-			if (not foundExtension):
-				if (step.hasChildren()):
+			if (not step.command):
+				if (len(step.children) > 0):
 					# Create new namespace
-					newNamespace = Rypple_Namespace({"__temp__": step.temp})
+					newNamespace = RFT_Structure({})
 
-					# Add namespace to parent
-					namespace[key] = newNamespace
+					# Add new namespace
+					self.setVar(key, newNamespace, namespace = namespace)
 
-
-
-					# Run in new namespace
+					# Run new namespace
 					self.callFunction(
-						self.run,
-						(
+						func = self.run,
+						args = (
 							step,
 						),
-						{
+						kwargs = {
 							"namespace": newNamespace
 						},
 						thread = step.thread
@@ -269,18 +153,17 @@ class Rypple_Scope:
 
 
 
-
 				else:
 					if (step.value != None):
 						# Evaluate and set variable
 						self.callFunction(
-							self.evaluateVar,
-							(
+							func = self.evaluateVar,
+							args = (
 								key,
 								step.value,
 								namespace
 							),
-							{},
+							kwargs = {},
 							thread = step.thread
 						)
 
@@ -288,48 +171,48 @@ class Rypple_Scope:
 
 			# Increment step
 			index += 1
-
-
-		return True
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~~ Evaluation ~~~~~~~~~~
-	"""
+	@RFT_Name("evaluate")
+	@RFT_Description("""
 		Evaluates string representations of values
 
 		@data : str = String representation of a value
-		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
-	"""
-	def evaluate(self,data,namespace=None):
-		if (isinstance(data,str)):
-			# If namespace is none
+		@namespace : RFT_Structure = Optional but sets the current scope of the variable being set to
+
+		@return: null
+	""")
+	def evaluate(self, data:str, namespace:RFT_Structure = None):
+		if (isinstance(data, str)):
 			if (namespace == None):
-				namespace = Rypple_Namespace()
+				namespace = RFT_Structure({})
 
 
 			try:
-				# Compile data
-				dataCompile = compile(data,self.constants.file,"eval")
+				dataCompile = compile(
+					data,
+					self.constants.dev.file,
+					"eval"
+				)
 
+				outData = eval(
+					dataCompile,
+					{
+						"__annotations__": {},
+						"__builtins__": self.builtins.data(),
 
-				# Evaluate data
-				outData = eval(dataCompile,{
-					"__annotations__": {},
-					"__builtins__": self.builtins,
-
-					**self.variables.values(),
-					**self.constants.values(),
-					**namespace.values(),
-					**self.modules.values()
-				},{})
-
-
+						**self.variables.data(),
+						**self.constants.data(),
+						**namespace.data(),
+						**self.modules.data(),
+					},
+					{}
+				)
 			except:
-				# Default to string out
 				outData = data
-
 		else:
 			outData = data
 
@@ -340,16 +223,17 @@ class Rypple_Scope:
 
 
 
-	"""
+	@RFT_Name("evaluateVar")
+	@RFT_Description("""
 		Evauates and sets variable as the evaluate value
 
 		@key : str = Variable name
 		@data : str = String representation of a value
-		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
+		@namespace : RFT_Structure = Optional but sets the current scope of the variable being set to
 
 		@return : null
-	"""
-	def evaluateVar(self,key,data,namespace = None):
+	""")
+	def evaluateVar(self, key:str, data:str, namespace:RFT_Structure = None):
 		# Evaluate data
 		value = self.evaluate(
 			data,
@@ -367,69 +251,46 @@ class Rypple_Scope:
 
 
 
-	"""
+	@RFT_Name("setVar")
+	@RFT_Description("""
 		Sets a variable into the scope accordingly
 		Check if variable exists in global scope and determine if it's a namespace then set that variable
 		
 		@key : str = Variable name
 		@value : any = The value the variable is setting
-		@namespace : Rypple_Namespace = Optional but sets the current scope of the variable being set to
+		@namespace : RFT_Structure = Optional but sets the current scope of the variable being set to
 		
 		@return : null
-	"""
-	def setVar(self,key,value,namespace = None):
-		# If not namespace
-		if (namespace != None):
-			# If variable name in globals
-			if (self.variables.contains(key)):
-				# If variable is a path
-				if ("." in key):
-					# If the local namespace doesn't have the variable
-					if (not namespace.contains(key)):
-						# Set global variable
-						self.variables[key] = value
-
-						return
+	""")
+	def setVar(self, key:str, value, namespace:RFT_Structure = None):
+		if (namespace == None):
+			namespace = self.variables
 
 
-			# Set local variable
-			namespace[key] = value
-
-		else:
-			# Set global variable
-			self.variables[key] = value
+		# Split key
+		path = key.split(".")
+		var = path.pop(-1)
 
 
+		try:
+			parent = namespace.parent(key)
+		except:
+			if (len(path) > 0):
+				parent = namespace.allocate(path)
+
+			else:
+				parent = namespace
 
 
-
-	"""
-		Load an extension into current scope
-
-		@ext : str/Rypple_Extension = Extension to load
-
-		@return : null
-	"""
-	def loadExtension(self,ext):
-		# If ext is a string then get extension from extensions list
-		if (isinstance(ext,str)):
-			ext = self.extensions.get(ext)
-
-
-
-		# Check if ext is a Rypple_Extension
-		if (issubclass(ext,Rypple_Extension)):
-			# Initialize extension
-			ext.init(ext,self)
-
-			# Add extension
-			self.loadedExtensions[ext.name] = ext
+		# Set var
+		parent[var] = value
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
 	# ~~~~~~~~~~~~ Threads ~~~~~~~~~~~
-	"""
+	@RFT_Name("callFunction")
+	@RFT_Description("""
 		Calls a function and logs its progress if debug is True
 
 		@func : function = The function being called
@@ -438,10 +299,10 @@ class Rypple_Scope:
 		@thread : bool = If thread shold be ran in a seperate thread
 
 		@return : null
-	"""
-	def callFunction(self,func,args,kwargs,thread=False):
+	""")
+	def callFunction(self, func, args:list = (), kwargs:dict = {}, thread:bool = False):
 		if (thread):
-			# Create thread
+			# Create new thread
 			newThread = threading.Thread(
 				target = self.callFunction,
 				args = (
@@ -450,187 +311,57 @@ class Rypple_Scope:
 					kwargs
 				),
 				kwargs = {
-					"thread": False,
+					"thread": False
 				},
 				daemon = True
 			)
 
+			# Append thread to list of all running threads
+			self.constants.dev.threads.append(
+				newThread
+			)
 
-			# Add thread to list
-			self.threads.append(newThread)
-
-
-			# Run thread
+			# Start thread
 			newThread.start()
-
 
 
 
 		else:
 			try:
 				# Call function
-				ret = func(*args,**kwargs)
+				retValue = func(
+					*args,
+					**kwargs
+				)
+
 
 			except:
-				ret = Rypple_Error(f"Failed to run '{func.__name__}'\n{traceback.format_exc()}") # Failed to call function
+				retValue = None
 
 
-
-			# If value returned is an iterable object convert that object to a tuple
-			if (isinstance(ret,Iterable)):
-				rets = tuple(ret)
-
-			# Else make a single item tuple with the value inside
-			else:
-				rets = (ret,)
-
-
-
-			# If return type is an exception
-			for r in rets:
-				if (isinstance(r,Rypple_Exception)):
-
-					# If in debug mode
-					if (self.constants.debug):
-						if (isinstance(r,Rypple_Log)):
-							if (self.constants.showLogs):
-								sys.stdout.write(r.text + "\n")
-								sys.stdout.flush()
-
-
-						else:
-						
-							# Write data to stdout and flush it
-							sys.stdout.write(r.text + "\n")
-							sys.stdout.flush()
-
-
-					# Exit program if citical error
-					if (isinstance(r,Rypple_Critical)):
-						self.constants.exit = 1
-
-						# Write critical to stdout and flush it
-						sys.stdout.write(r.text + "\n")
-						sys.stdout.flush()
+			finally:
+				return retValue
 
 
 
 
 
-
-	"""
+	@RFT_Name("wait")
+	@RFT_Description("""
 		Wait and join all scope threads to finish before closing
 
 		@return : null
-	"""
+	""")
 	def wait(self):
 		# Iterate until all threads are closed
-		for t in self.threads:
+		for t in self.constants.dev.threads:
 			# Join thread
 			t.join()
 
 
 		# Clear threads list
-		self.threads.clear()
+		self.constants.dev.threads.clear()
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-	# ~~~~~~~~~~~~ Methods ~~~~~~~~~~~
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-
-
-
-
-
-
-
-
-
-# ~~~~~~~~ Load Extensions ~~~~~~~
-# Get file path
-filePath = Path(__file__)
-
-# Get extensions path
-extensionsPath = (filePath.parent / "extensions").resolve()
-
-
-
-# Get extension path files
-for f in extensionsPath.rglob("*.py"):
-	# Resolve file path
-	f = f.resolve()
-
-
-
-	# Get name and format it
-	nameFmt = f.as_posix().replace(extensionsPath.as_posix(),"")
-	nameFmt = nameFmt.rstrip(".py")
-	nameFmt = nameFmt.strip("\\")
-	nameFmt = nameFmt.replace("/","\\")
-
-
-
-	# Split name between the delimiters
-	nameSplit = nameFmt.split("\\")
-
-
-
-	# If namesplit is greater than 1
-	if (len(nameSplit) > 1):
-		# If it ends with core than its a parent
-		if (nameSplit[-1].lower() == "core"):
-			nameSplit.pop(-1)
-
-
-
-	# Join name
-	name = ".".join(nameSplit)
-	name = name.strip(".")
-
-
-
-	# Import module spec
-	spec = importlib.util.spec_from_file_location(name,f)
-
-	# Get module
-	module = importlib.util.module_from_spec(spec)
-
-
-
-	try:
-		# Compile module
-		spec.loader.exec_module(module)
-
-	except:
-		...
-
-
-
-	if (hasattr(module,"Extension")):
-		# Get module extension
-		ext = module.Extension
-
-
-		# Get meta data
-		name = ext.name
-		description = ext.description
-		enabled = ext.enabled
-		core = ext.core
-
-
-		# Add extension to extension list
-		if (core):
-			if (enabled):
-				Rypple_Scope.loadedExtensions[name] = ext
-
-		else:
-			Rypple_Scope.extensions[name] = ext
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 
 

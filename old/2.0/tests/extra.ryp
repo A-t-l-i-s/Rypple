@@ -2,5 +2,12 @@
 
 Namespace: extra
 	value: UwU
+	index: 2
 End
+
+
+Print: extra.value
+
+
+Done
 

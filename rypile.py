@@ -3,25 +3,27 @@ import os
 from pathlib import Path
 
 from Rypple import *
-from Rypple.scope import *
 
 
 
 
 
 if (__name__ == "__main__"):
-	path = Path(".")
-
-	file = Rypple.findFile("manifest",".")
+	path = Path("manifest.ryp")
 
 
 
-	if (file != None):
-		base = Rypple.readFile(file)
+	if (path.exists() and path.is_file()):
+		# Create scope
 		scope = Rypple_Scope()
-		scope.constants.debug = True
 
+		# Read file
+		base = Rypple.readFile("manifest.ryp")
 
+		# Set debug
+		scope.constants.dev.debug = True
+
+		# Compile file
 		scope.run(base)
 		scope.wait()
 

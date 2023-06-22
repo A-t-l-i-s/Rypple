@@ -1,7 +1,5 @@
 import inspect
 
-from .decorators import *
-
 
 
 
@@ -28,11 +26,10 @@ class Rypple_Extension:
 	description: str = None
 
 	enabled: bool = False
-	core: bool = False
 
 
 
-	def init(cls,scope):
+	def init(cls, scope):
 		...
 
 
@@ -45,21 +42,21 @@ class Rypple_Extension:
 
 
 		for d in dir(cls):
-			v = getattr(cls,d)
+			v = getattr(cls, d)
 			
 			if (not (d.startswith("__") and d.endswith("__"))):
 				if (cls.valid(v)):
 					enabled = True
 
 					# If enabled
-					if (hasattr(v,"enabled")):
+					if (hasattr(v, "enabled")):
 						if (not v.enabled):
 							enabled = False
 
 
 					if (enabled):
 						# Get name
-						if (hasattr(v,"name")):
+						if (hasattr(v, "name")):
 							name = v.name
 						
 						else:
@@ -77,7 +74,7 @@ class Rypple_Extension:
 
 
 	@classmethod
-	def get(cls,name):
+	def get(cls, name):
 		funcs = cls.all()
 
 		return funcs.get(name)
@@ -87,7 +84,7 @@ class Rypple_Extension:
 
 
 	@classmethod
-	def valid(cls,func):
+	def valid(cls, func):
 		if (callable(func)):
 			try:
 				sig = inspect.signature(func)
@@ -98,8 +95,9 @@ class Rypple_Extension:
 
 
 			if (args == requiredParameters):
-				if (func.enabled):
-					return True
+				if (hasattr(func, "enabled") and hasattr(func, "name")):
+					if (func.enabled and func.name != None):
+						return True
 
 
 		return False
