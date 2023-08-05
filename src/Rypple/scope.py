@@ -1,13 +1,18 @@
+import types
 import threading
 import traceback
 
 from pathlib import Path
 
 from RFTLib.Core.Types import *
+from RFTLib.Core.Exception import *
 from RFTLib.Core.Structure import *
 from RFTLib.Core.Decorators.Label import *
 
+
 from .extensions.core import Extension as Core_Extension
+
+from .extensions.rypile import Extension as RyPile_Extension
 
 
 
@@ -22,6 +27,7 @@ __all__ = ("Rypple_Scope",)
 class Rypple_Scope:
 	# ~~~~~~~~~~ Extensions ~~~~~~~~~~
 	extensions = RFT_Structure({
+		RyPile_Extension.name: RyPile_Extension,
 	})
 
 	loadedExtensions = RFT_Structure({
@@ -45,12 +51,15 @@ class Rypple_Scope:
 		self.constants = RFT_Structure({
 			"dev": RFT_Structure({
 				"exit": -1,
+				"breakScope": False,
 				"file": "dummy",
 
 				"debug": False,
 
 				"enableBytecode": False,
 				"enableCommands": True,
+
+				"loopVar": "x",
 
 				"threads": [],
 			})
@@ -64,6 +73,9 @@ class Rypple_Scope:
 		self.loadedExtensions = RFT_Structure(
 			Rypple_Scope.loadedExtensions
 		)
+
+
+		self.exceptionLevel = 1
 
 
 
@@ -92,6 +104,11 @@ class Rypple_Scope:
 		while (index < size):
 			# If exit var is anything but -1
 			if (self.constants.dev.exit != -1):
+				return False
+
+			# If break loop
+			if (self.constants.dev.breakScope):
+				self.constants.dev.breakScope = False
 				return False
 
 
@@ -171,6 +188,9 @@ class Rypple_Scope:
 
 			# Increment step
 			index += 1
+
+
+		return True
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -212,7 +232,20 @@ class Rypple_Scope:
 					{}
 				)
 			except:
-				outData = data
+				# Get formated exception
+				exc = RFT_Exception(
+					traceback.format_exc(),
+					RFT_Exception.ERROR
+				)
+
+
+				if (exc.level <= self.exceptionLevel or self.exceptionLevel <= 0):
+					# Output exception
+					print(
+						exc.message()
+					)
+
+				outData = None
 		else:
 			outData = data
 
@@ -327,6 +360,8 @@ class Rypple_Scope:
 
 
 		else:
+			retValue = None
+
 			try:
 				# Call function
 				retValue = func(
@@ -335,11 +370,26 @@ class Rypple_Scope:
 				)
 
 
+			except RFT_Exception as exc:
+				# Output exception
+				retValue = exc
+
+
 			except:
-				retValue = None
+				# Get formated exception
+				retValue = RFT_Exception(
+					traceback.format_exc(),
+					RFT_Exception.ERROR
+				)
 
 
 			finally:
+				if (isinstance(retValue, RFT_Exception)):
+					if (retValue.level <= self.exceptionLevel or self.exceptionLevel <= 0):
+						print(
+							retValue.message()
+						)
+
 				return retValue
 
 

@@ -12,11 +12,11 @@ if (__name__ == "__main__"):
 
 
 
-	base = Rypple.readFile("tests/test.ryp")
+	base = Rypple.readFile("tests/dummy.ryp")
 
+	scope.exceptionLevel = 0
 	scope.run(base)
 	scope.wait()
-
 
 
 

@@ -79,7 +79,7 @@ class Rypple_Scope(object):
 
 
 	# ~~~~~~~~~~~~ Runtime ~~~~~~~~~~~
-	def run(self,groups,namespace=None):
+	def run(self, groups, namespace = None):
 		index = 0
 		size = len(groups.steps)
 
@@ -147,7 +147,7 @@ class Rypple_Scope(object):
 
 
 
-	def validVar(self,var):
+	def validVar(self, var):
 		t = string.ascii_lowercase + string.ascii_uppercase + "_."
 		d = string.digits
 
@@ -168,7 +168,7 @@ class Rypple_Scope(object):
 
 
 
-	def loadExtension(self,val):
+	def loadExtension(self, val):
 		if (val in self.extensions):
 			if (val not in self.loadedExtensions):
 				ext = self.extensions[val]
@@ -193,7 +193,7 @@ class Rypple_Scope(object):
 
 
 	# ~~~~~~~~~ Evaluate Code ~~~~~~~~
-	def evaluate(self,data,namespace=None,file=None):
+	def evaluate(self, data, namespace = None, file = None):
 		# If no file specified
 		if (file == None):
 			file = "dummy"
@@ -229,7 +229,7 @@ class Rypple_Scope(object):
 
 
 	# ~~~~~~~~ Core Functions ~~~~~~~~
-	def defined(self,var):
+	def defined(self, var):
 		if (var in self.namespace or var in self.constants):
 			return True
 

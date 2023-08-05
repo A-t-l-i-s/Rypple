@@ -1,0 +1,48 @@
+@Extension: RyPile
+
+a: 1
+
+
+
+@If: a == 1
+	a: 69
+
+	@Else:
+		a: 0
+
+	@Else:
+		a: 7
+
+
+@Test: a
+
+
+@Var: var
+@For: [0,5,6,7]
+	@Test: var
+	@Break
+
+
+@Test: 12
+
+
+
+l: 0
+@While: l < 10
+	@Test: l
+	@Incr: l
+
+
+
+rypileDup:
+	@Join: rypile
+
+	args: "kys"
+
+
+@Test: rypileDup.data()
+@Test: rypile.data()
+
+
+@Delay: 100ms
+
