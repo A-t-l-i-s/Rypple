@@ -25,21 +25,6 @@ class Extension(Rypple_Extension):
 
 
 
-	@RFT_Name("Test")
-	@RFT_Description("")
-	@RFT_Enabled(True)
-	def Test(cls, step, scope, namespace):
-		value = scope.evaluate(
-			step.value,
-			namespace = namespace
-		)
-
-		print(value)
-
-
-
-
-
 	@RFT_Name("Import")
 	@RFT_Description("")
 	@RFT_Enabled(True)
@@ -83,14 +68,9 @@ class Extension(Rypple_Extension):
 
 				# If extension not already loaded
 				if (not scope.loadedExtensions.contains(value)):
-
-					# Load extension
-					ext.init(
-						ext,
-						scope
+					scope.loadExtension(
+						value
 					)
-
-					scope.loadedExtensions[value] = ext
 
 				else:
 					return RFT_Exception(

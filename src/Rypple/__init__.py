@@ -322,3 +322,24 @@ class Rypple:
 
 
 
+
+
+def load(path:str, wait:bool = True):
+	# Creat scope
+	scope = Rypple_Scope()
+
+
+	# Read file
+	base = Rypple.readFile(path)
+
+	
+	# Execute code
+	scope.run(base)
+
+
+	if (wait):
+		# Wait for all threads
+		scope.wait()
+
+
+

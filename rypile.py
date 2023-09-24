@@ -16,6 +16,7 @@ if (__name__ == "__main__"):
 	if (path.exists() and path.is_file()):
 		# Create scope
 		scope = Rypple_Scope()
+		scope.exceptionLevel = 0
 
 		# Read file
 		base = Rypple.readFile("manifest.ryp")

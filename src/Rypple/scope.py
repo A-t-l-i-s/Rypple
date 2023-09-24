@@ -11,8 +11,18 @@ from RFTLib.Core.Decorators.Label import *
 
 
 from .extensions.core import Extension as Core_Extension
+from .extensions.console import Extension as Console_Extension
+from .extensions.filesystem import Extension as FileSystem_Extension
 
 from .extensions.rypile import Extension as RyPile_Extension
+from .extensions.rypile.c import Extension as RyPile_C_Extension
+from .extensions.rypile.cpp import Extension as RyPile_CPP_Extension
+from .extensions.rypile.cs import Extension as RyPile_CS_Extension
+from .extensions.rypile.java import Extension as RyPile_Java_Extension
+from .extensions.rypile.javascript import Extension as RyPile_Javascript_Extension
+from .extensions.rypile.kotlin import Extension as RyPile_Kotlin_Extension
+from .extensions.rypile.lua import Extension as RyPile_Lua_Extension
+from .extensions.rypile.python import Extension as RyPile_Python_Extension
 
 
 
@@ -27,7 +37,18 @@ __all__ = ("Rypple_Scope",)
 class Rypple_Scope:
 	# ~~~~~~~~~~ Extensions ~~~~~~~~~~
 	extensions = RFT_Structure({
+		Console_Extension.name: Console_Extension,
+		FileSystem_Extension.name: FileSystem_Extension,
+
 		RyPile_Extension.name: RyPile_Extension,
+		RyPile_C_Extension.name: RyPile_C_Extension,
+		RyPile_CPP_Extension.name: RyPile_CPP_Extension,
+		RyPile_CS_Extension.name: RyPile_CS_Extension,
+		RyPile_Java_Extension.name: RyPile_Java_Extension,
+		RyPile_Javascript_Extension.name: RyPile_Javascript_Extension,
+		RyPile_Kotlin_Extension.name: RyPile_Kotlin_Extension,
+		RyPile_Lua_Extension.name: RyPile_Lua_Extension,
+		RyPile_Python_Extension.name: RyPile_Python_Extension,
 	})
 
 	loadedExtensions = RFT_Structure({
@@ -211,12 +232,17 @@ class Rypple_Scope:
 				namespace = RFT_Structure({})
 
 
+			# Define exc
+			exc = None
+
+
 			try:
 				dataCompile = compile(
 					data,
 					self.constants.dev.file,
 					"eval"
 				)
+
 
 				outData = eval(
 					dataCompile,
@@ -231,6 +257,7 @@ class Rypple_Scope:
 					},
 					{}
 				)
+
 			except:
 				# Get formated exception
 				exc = RFT_Exception(
@@ -238,14 +265,15 @@ class Rypple_Scope:
 					RFT_Exception.ERROR
 				)
 
-
-				if (exc.level <= self.exceptionLevel or self.exceptionLevel <= 0):
-					# Output exception
-					print(
-						exc.message()
-					)
-
 				outData = None
+
+			finally:
+				if (exc != None):
+					if (exc.level <= self.exceptionLevel or self.exceptionLevel <= 0):
+						# Output exception
+						print(
+							exc.message()
+						)
 		else:
 			outData = data
 
@@ -384,11 +412,16 @@ class Rypple_Scope:
 
 
 			finally:
-				if (isinstance(retValue, RFT_Exception)):
-					if (retValue.level <= self.exceptionLevel or self.exceptionLevel <= 0):
-						print(
-							retValue.message()
-						)
+				if (isinstance(retValue, (types.GeneratorType, RFT_Exception))):
+					if (isinstance(retValue, RFT_Exception)):
+						retValue = (retValue,)
+
+					for x in retValue:
+						if (isinstance(x, RFT_Exception)):
+							if (x.level <= self.exceptionLevel or self.exceptionLevel <= 0):
+								print(
+									x.message()
+								)
 
 				return retValue
 
@@ -411,6 +444,32 @@ class Rypple_Scope:
 
 		# Clear threads list
 		self.constants.dev.threads.clear()
+
+
+
+
+
+	@RFT_Name("loadExtension")
+	@RFT_Description("""
+		Loads a new extension into current scope
+
+		@name : str = Name of extension being loaded
+
+		@return : null
+	""")
+	def loadExtension(self, name:str):
+		# If extension exists
+		if (self.extensions.contains(name)):
+			# Get extension
+			ext = self.extensions[name]
+
+			# Load extension
+			ext.init(
+				ext,
+				self
+			)
+
+			self.loadedExtensions[name] = ext
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

@@ -1,14 +1,14 @@
-Extension: RyPile
-Extension: RyPile.Python
+@Extension: RyPile
+@Extension: RyPile-Python
 
 
 
-DontWritBytecode
-Unbuffered
+@DontWritBytecode
+@Unbuffered
 
-File: main.py
+@File: "main.py"
 
 
 
-Done
+@Done
 
