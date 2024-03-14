@@ -1,9 +1,10 @@
 @Extension: Console
 @Extension: FileSystem
 
-@Extension: RyPile
-@Extension: RyPile-C++
+@Extension: PicoBridge
 
 
 
+@Bridge: "com3"
+@Pull: "backup"
 

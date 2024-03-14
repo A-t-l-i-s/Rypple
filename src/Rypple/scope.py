@@ -4,7 +4,6 @@ import traceback
 
 from pathlib import Path
 
-from RFTLib.Core.Types import *
 from RFTLib.Core.Exception import *
 from RFTLib.Core.Structure import *
 from RFTLib.Core.Decorators.Label import *
@@ -23,6 +22,8 @@ from .extensions.rypile.javascript import Extension as RyPile_Javascript_Extensi
 from .extensions.rypile.kotlin import Extension as RyPile_Kotlin_Extension
 from .extensions.rypile.lua import Extension as RyPile_Lua_Extension
 from .extensions.rypile.python import Extension as RyPile_Python_Extension
+
+from .extensions.picobridge import Extension as PicoBridge_Extension
 
 
 
@@ -49,6 +50,8 @@ class Rypple_Scope:
 		RyPile_Kotlin_Extension.name: RyPile_Kotlin_Extension,
 		RyPile_Lua_Extension.name: RyPile_Lua_Extension,
 		RyPile_Python_Extension.name: RyPile_Python_Extension,
+
+		PicoBridge_Extension.name: PicoBridge_Extension,
 	})
 
 	loadedExtensions = RFT_Structure({

@@ -11,7 +11,6 @@ if (__name__ == "__main__"):
 	scope = Rypple_Scope()
 
 
-
 	base = Rypple.readFile("tests/dummy.ryp")
 
 	scope.exceptionLevel = 0

@@ -261,7 +261,8 @@ class Extension(Rypple_Extension):
 					rypile.args.append(cmd)
 
 				else:
-					rypile.args.remove(cmd)
+					if (cmd in rypile.args):
+						rypile.args.remove(cmd)
 
 			else:
 				return RFT_Exception.TypeError(
@@ -311,7 +312,7 @@ class Extension(Rypple_Extension):
 		rypile = scope.variables.rypile
 
 		# Command
-		cmd = "-Wl,subsystem,windows"
+		cmd = "-mwindows"
 
 
 		if (step.value != None):
@@ -326,7 +327,8 @@ class Extension(Rypple_Extension):
 					rypile.args.append(cmd)
 
 				else:
-					rypile.args.remove(cmd)
+					if (cmd in rypile.args):
+						rypile.args.remove(cmd)
 
 			else:
 				return RFT_Exception.TypeError(
@@ -362,7 +364,8 @@ class Extension(Rypple_Extension):
 					rypile.args.append(cmd)
 
 				else:
-					rypile.args.remove(cmd)
+					if (cmd in rypile.args):
+						rypile.args.remove(cmd)
 
 			else:
 				return RFT_Exception.TypeError(
